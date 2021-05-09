@@ -53,7 +53,7 @@ func (s UserRepo) Connect(wait time.Duration) error {
 	return nil
 }
 
-func (s *UserRepo) Get(ctx context.Context, id uuid.UUID, opt ...Option) (*domain.User, error) {
+func (s *UserRepo) get(ctx context.Context, id uuid.UUID, opt ...Option) (*domain.User, error) {
 
 	p, err := s._Get(ctx, id, opt...)
 	if err != nil {
@@ -69,6 +69,14 @@ func (s *UserRepo) Get(ctx context.Context, id uuid.UUID, opt ...Option) (*domai
 	}
 
 	return BuildUser(*p, a)
+}
+
+func (s *UserRepo) Get(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	return s.get(ctx, id)
+}
+
+func (s *UserRepo) GetForUpdate(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	return s.get(ctx, id, WithLockForUpdate())
 }
 
 func (s *UserRepo) Delete(ctx context.Context, id uuid.UUID) error {
