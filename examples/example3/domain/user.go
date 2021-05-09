@@ -5,6 +5,7 @@ import (
 )
 
 type (
+	// User defines domain model.
 	User struct {
 		Id      uuid.UUID
 		Name    string

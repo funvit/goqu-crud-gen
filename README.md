@@ -45,10 +45,11 @@ See examples for mode info.
 
 # Examples
 
-See `./examples` folder.
+See [./examples](./examples) folder.
 
 # TODO
 
 - [ ] tests
 - [ ] tests with mysql in docker
 - [ ] string field maxlen rule by annotation?
+- [ ] new flag allowed customising `WithTran` method name.
