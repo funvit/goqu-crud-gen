@@ -4,7 +4,7 @@
 
 Generates a basic repository by db model definition.
 
-Expected to be used by [goqu](https://github.com/doug-martin/goqu/v9) and [sqlx](https://github.com/jmoiron/sqlx) users.
+Expected to be used by [goqu](https://github.com/doug-martin/goqu) and [sqlx](https://github.com/jmoiron/sqlx) users.
 
 # What is generated?
 
