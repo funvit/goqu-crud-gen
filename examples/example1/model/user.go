@@ -1,4 +1,4 @@
-package example1
+package model
 
 //go:generate goqu-crud-gen -model User -table user -dialect mysql -g
 type User struct {
