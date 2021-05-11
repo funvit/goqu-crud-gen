@@ -83,6 +83,13 @@ func (s *{{ .Repo.Name }}) SetMaxOpenConns(n int) {
 	s.db.SetMaxOpenConns(n)
 }
 
+// SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
+//
+// See also: sql.SetConnMaxLifetime.
+func (s *{{ .Repo.Name }}) SetConnMaxLifetime(d time.Duration) {
+	s.db.SetConnMaxLifetime(d)
+}
+
 // WithTran wraps function call in transaction.
 func (s *{{ .Repo.Name }}) WithTran(ctx context.Context, f func(ctx context.Context) error) error {
 	return Transaction(ctx, s.db, f)

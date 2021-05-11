@@ -21,7 +21,7 @@ func main() {
 	repo := model.NewUserRepo(dsn)
 	err := repo.Connect(3 * time.Second)
 	if err != nil {
-		log.Fatalln("repo connect error: %s", err)
+		log.Fatalf("repo connect error: %s", err)
 	}
 
 	// migrate
@@ -62,7 +62,7 @@ func main() {
 			return err
 		})
 		if err != nil {
-			log.Fatalln("Get error: %w", err)
+			log.Fatalln("Get error:", err)
 		}
 		if u == nil {
 			log.Fatalln("user not exists")

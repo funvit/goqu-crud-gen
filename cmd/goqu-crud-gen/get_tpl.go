@@ -32,10 +32,8 @@ func (s *{{ .Repo.Name }}) iter(
 		return fmt.Errorf("query builder error: %w", err)
 	}
 
-	var cancel context.CancelFunc
-
-	ctx, cancel = context.WithCancel(ctx)
-	defer cancel()
+	sigCtx, sigCtxCancel := context.WithCancel(ctx)
+	defer sigCtxCancel()
 
 	rows, err := tx.QueryxContext(ctx, q, args...)
 	if err != nil {
@@ -49,7 +47,7 @@ func (s *{{ .Repo.Name }}) iter(
 	var m {{ .Model.Name }}
 	for rows.Next() {
 		select {
-		case <-ctx.Done():
+		case <-sigCtx.Done():
 			break
 		default:
 		}
@@ -59,7 +57,7 @@ func (s *{{ .Repo.Name }}) iter(
 			return fmt.Errorf("row scan error: %w", err)
 		}
 
-		f(m, func() { cancel() })
+		f(m, func() { sigCtxCancel() })
 	}
 
 	return nil

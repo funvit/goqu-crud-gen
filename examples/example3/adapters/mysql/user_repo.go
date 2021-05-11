@@ -3,6 +3,7 @@ package mysql
 import (
 	"context"
 	"example3/domain"
+	"fmt"
 	. "github.com/funvit/goqu-crud-gen"
 	"github.com/google/uuid"
 	"time"
@@ -55,6 +56,8 @@ func (s UserRepo) Connect(wait time.Duration) error {
 
 func (s *UserRepo) get(ctx context.Context, id uuid.UUID, opt ...Option) (*domain.User, error) {
 
+	// fixme: second Get flaky: bad conn
+
 	p, err := s._Get(ctx, id, opt...)
 	if err != nil {
 		return nil, err
@@ -69,6 +72,33 @@ func (s *UserRepo) get(ctx context.Context, id uuid.UUID, opt ...Option) (*domai
 	}
 
 	return BuildUser(*p, a)
+}
+
+func (s *UserRepo) Create(ctx context.Context, u domain.User) error {
+
+	var upf UserPublicFields
+	err := upf.Bind(u)
+	if err != nil {
+		return fmt.Errorf("model convert error: %w", err)
+	}
+
+	err = s._Create(ctx, &upf)
+	if err != nil {
+		return err
+	}
+
+	var acc Account
+	err = acc.Bind(*u.Account, u.Id)
+	if err != nil {
+		return fmt.Errorf("model convert error: %w", err)
+	}
+
+	err = s.accRepo.Create(ctx, &acc)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *UserRepo) Get(ctx context.Context, id uuid.UUID) (*domain.User, error) {

@@ -94,6 +94,13 @@ func (s *UserRepo) SetMaxOpenConns(n int) {
 	s.db.SetMaxOpenConns(n)
 }
 
+// SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
+//
+// See also: sql.SetConnMaxLifetime.
+func (s *UserRepo) SetConnMaxLifetime(d time.Duration) {
+	s.db.SetConnMaxLifetime(d)
+}
+
 // WithTran wraps function call in transaction.
 func (s *UserRepo) WithTran(ctx context.Context, f func(ctx context.Context) error) error {
 	return Transaction(ctx, s.db, f)
@@ -160,10 +167,8 @@ func (s *UserRepo) iter(
 		return fmt.Errorf("query builder error: %w", err)
 	}
 
-	var cancel context.CancelFunc
-
-	ctx, cancel = context.WithCancel(ctx)
-	defer cancel()
+	sigCtx, sigCtxCancel := context.WithCancel(ctx)
+	defer sigCtxCancel()
 
 	rows, err := tx.QueryxContext(ctx, q, args...)
 	if err != nil {
@@ -177,7 +182,7 @@ func (s *UserRepo) iter(
 	var m User
 	for rows.Next() {
 		select {
-		case <-ctx.Done():
+		case <-sigCtx.Done():
 			break
 		default:
 		}
@@ -187,7 +192,7 @@ func (s *UserRepo) iter(
 			return fmt.Errorf("row scan error: %w", err)
 		}
 
-		f(m, func() { cancel() })
+		f(m, func() { sigCtxCancel() })
 	}
 
 	return nil
