@@ -14,7 +14,7 @@ func (s *{{.Repo.Name}}) {{"Delete"|CRUD}}(ctx context.Context, id {{.Model.GetP
 		return 0, err
 	}
 
-	ds := s.dialect.Delete(s.t).Where(s.f.PK().Eq(id))
+	ds := s.dialect.Delete(s.t).Where(s.f.PK().Eq(id)).Prepared(true)
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
@@ -48,7 +48,7 @@ func (s *{{ .Repo.Name }}) {{"DeleteMany"|CRUD}}(ctx context.Context, ids []{{.M
 		return 0, err
 	}
 
-	ds := s.dialect.Delete(s.t).Where(s.f.PK().In(ids))
+	ds := s.dialect.Delete(s.t).Where(s.f.PK().In(ids)).Prepared(true)
 
 	q, args, err := ds.ToSQL()
 	if err != nil {

@@ -17,7 +17,7 @@ func (s *{{ .Repo.Name }}) iter(
 		return err
 	}
 
-	ds := s.dialect.From(s.t)
+	ds := s.dialect.From(s.t).Prepared(true)
 
 	if filter != nil {
 		ds = ds.Where(filter)
