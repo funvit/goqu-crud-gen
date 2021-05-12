@@ -115,7 +115,7 @@ func (s *UserPublicFieldsRepo) _Create(ctx context.Context, m *UserPublicFields)
 		return err
 	}
 
-	ds := s.dialect.Insert(s.t).Rows(m)
+	ds := s.dialect.Insert(s.t).Rows(m).Prepared(true)
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
@@ -146,7 +146,7 @@ func (s *UserPublicFieldsRepo) iter(
 		return err
 	}
 
-	ds := s.dialect.From(s.t)
+	ds := s.dialect.From(s.t).Prepared(true)
 
 	if filter != nil {
 		ds = ds.Where(filter)
@@ -256,7 +256,10 @@ func (s *UserPublicFieldsRepo) _Update(ctx context.Context, m UserPublicFields) 
 		return err
 	}
 
-	ds := s.dialect.Update(s.t).Set(m).Where(s.f.PK().Eq(m.Id))
+	ds := s.dialect.Update(s.t).
+		Prepared(true).
+		Set(m).
+		Where(s.f.PK().Eq(m.Id))
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
@@ -283,7 +286,7 @@ func (s *UserPublicFieldsRepo) _Delete(ctx context.Context, id uuid.UUID) (n int
 		return 0, err
 	}
 
-	ds := s.dialect.Delete(s.t).Where(s.f.PK().Eq(id))
+	ds := s.dialect.Delete(s.t).Where(s.f.PK().Eq(id)).Prepared(true)
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
@@ -317,7 +320,7 @@ func (s *UserPublicFieldsRepo) _DeleteMany(ctx context.Context, ids []uuid.UUID)
 		return 0, err
 	}
 
-	ds := s.dialect.Delete(s.t).Where(s.f.PK().In(ids))
+	ds := s.dialect.Delete(s.t).Where(s.f.PK().In(ids)).Prepared(true)
 
 	q, args, err := ds.ToSQL()
 	if err != nil {

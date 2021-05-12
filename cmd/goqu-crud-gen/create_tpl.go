@@ -12,7 +12,7 @@ func (s *{{.Repo.Name}}) {{"Create"|CRUD}}(ctx context.Context, m *{{.Model.Name
 		return err
 	}
 
-	ds := s.dialect.Insert(s.t).Rows(m)
+	ds := s.dialect.Insert(s.t).Rows(m).Prepared(true)
 
 	q, args, err := ds.ToSQL()
 	if err != nil {

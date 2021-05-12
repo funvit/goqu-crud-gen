@@ -10,7 +10,10 @@ func (s *{{.Repo.Name}}) {{"Update"|CRUD}}(ctx context.Context, m {{.Model.Name}
 		return err
 	}
 
-	ds := s.dialect.Update(s.t).Set(m).Where(s.f.PK().Eq(m.{{.Model.GetPrimaryKeyField.Name}}))
+	ds := s.dialect.Update(s.t).
+		Prepared(true).
+		Set(m).
+		Where(s.f.PK().Eq(m.{{.Model.GetPrimaryKeyField.Name}}))
 
 	q, args, err := ds.ToSQL()
 	if err != nil {

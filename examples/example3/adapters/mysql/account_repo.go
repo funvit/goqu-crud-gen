@@ -117,7 +117,7 @@ func (s *AccountRepo) Create(ctx context.Context, m *Account) error {
 		return err
 	}
 
-	ds := s.dialect.Insert(s.t).Rows(m)
+	ds := s.dialect.Insert(s.t).Rows(m).Prepared(true)
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
@@ -148,7 +148,7 @@ func (s *AccountRepo) iter(
 		return err
 	}
 
-	ds := s.dialect.From(s.t)
+	ds := s.dialect.From(s.t).Prepared(true)
 
 	if filter != nil {
 		ds = ds.Where(filter)
@@ -258,7 +258,10 @@ func (s *AccountRepo) Update(ctx context.Context, m Account) error {
 		return err
 	}
 
-	ds := s.dialect.Update(s.t).Set(m).Where(s.f.PK().Eq(m.UserId))
+	ds := s.dialect.Update(s.t).
+		Prepared(true).
+		Set(m).
+		Where(s.f.PK().Eq(m.UserId))
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
@@ -285,7 +288,7 @@ func (s *AccountRepo) Delete(ctx context.Context, id uuid.UUID) (n int64, err er
 		return 0, err
 	}
 
-	ds := s.dialect.Delete(s.t).Where(s.f.PK().Eq(id))
+	ds := s.dialect.Delete(s.t).Where(s.f.PK().Eq(id)).Prepared(true)
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
@@ -319,7 +322,7 @@ func (s *AccountRepo) DeleteMany(ctx context.Context, ids []uuid.UUID) (n int64,
 		return 0, err
 	}
 
-	ds := s.dialect.Delete(s.t).Where(s.f.PK().In(ids))
+	ds := s.dialect.Delete(s.t).Where(s.f.PK().In(ids)).Prepared(true)
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
