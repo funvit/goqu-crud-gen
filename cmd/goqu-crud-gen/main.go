@@ -113,7 +113,7 @@ func main() {
 
 	// remove current repo file to avoid parser errors
 	repoFileName := camelToSake(*fModel) + "_repo.go"
-	outputFilepath := filepath.Join(filepath.Base(*fPath), repoFileName)
+	outputFilepath := filepath.Join(*fPath, repoFileName)
 	_ = os.Remove(outputFilepath)
 
 	// region parse path
