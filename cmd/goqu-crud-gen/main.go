@@ -188,7 +188,7 @@ func main() {
 		sb.WriteString(" ")
 		sb.WriteString("-path")
 		sb.WriteString(" ")
-		sb.WriteString(*fPath)
+		sb.WriteString(".")
 
 		if *fRepo != "" {
 			sb.WriteString(" ")
