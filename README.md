@@ -52,4 +52,4 @@ See [./examples](./examples) folder.
 - [ ] tests
 - [ ] tests with mysql in docker
 - [ ] string field maxlen rule by annotation?
-- [ ] new flag allowed customising `WithTran` method name.
+- [x] ~~new flag allowed customising `WithTran` method name.~~ (`-rename-with-tran`)

@@ -58,6 +58,7 @@ func main() {
 	fRepo := flag.String("repo", "", "custom repository struct name")
 	fPrivateCrud := flag.Bool("private-crud-methods", false, "create CRUD methods as private")
 	fNoGen := flag.Bool("g", false, "don't put //go:generate instruction to the generated code")
+	fWithTranName := flag.String("rename-with-tran", "WithTran", "rename WithTran helper method")
 
 	fDebug := flag.Bool("d", false, "debug")
 
@@ -95,6 +96,9 @@ func main() {
 	}
 	if *fTable == "" {
 		logError.Fatalln("table flag must be specified")
+	}
+	if *fWithTranName == "" {
+		logError.Fatalln("WithTran new name flag must be specified")
 	}
 
 	// endregion
@@ -148,6 +152,8 @@ func main() {
 		logError.Fatalln("model spec load error:", err)
 	}
 
+	d.WithTranName = *fWithTranName
+
 	d.Repo = Repo{
 		Name:    fmt.Sprintf("%sRepo", *fModel),
 		Table:   *fTable,
@@ -194,6 +200,13 @@ func main() {
 		if *fPrivateCrud {
 			sb.WriteString(" ")
 			sb.WriteString("-private-crud-methods")
+		}
+
+		if *fWithTranName != "" {
+			sb.WriteString(" ")
+			sb.WriteString("-rename-with-tran")
+			sb.WriteString(" ")
+			sb.WriteString(*fWithTranName)
 		}
 
 		if *fDebug {

@@ -15,7 +15,8 @@ type (
 
 		Repo Repo
 
-		PrivateCRUD bool
+		PrivateCRUD  bool
+		WithTranName string
 	}
 	Repo struct {
 		Name    string

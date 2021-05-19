@@ -90,8 +90,8 @@ func (s *{{ .Repo.Name }}) SetConnMaxLifetime(d time.Duration) {
 	s.db.SetConnMaxLifetime(d)
 }
 
-// WithTran wraps function call in transaction.
-func (s *{{ .Repo.Name }}) WithTran(ctx context.Context, f func(ctx context.Context) error) error {
+// {{.WithTranName}} wraps function call in transaction.
+func (s *{{ .Repo.Name }}) {{.WithTranName}}(ctx context.Context, f func(ctx context.Context) error) error {
 	return Transaction(ctx, s.db, f)
 }
 `
