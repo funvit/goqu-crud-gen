@@ -12,7 +12,7 @@ func (s *{{ .Repo.Name }}) iter(
 	opt ...Option,
 ) error {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,7 @@ const createTpl = `
 // If model have "auto" primary key field - it's will be updated in-place.
 func (s *{{.Repo.Name}}) {{"Create"|CRUD}}(ctx context.Context, m *{{.Model.Name}}) error {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return err
 	}

@@ -4,7 +4,8 @@
 
 Generates a basic repository by db model definition.
 
-Expected to be used by [goqu](https://github.com/doug-martin/goqu) and [sqlx](https://github.com/jmoiron/sqlx) users.
+Expected to be used by [goqu](https://github.com/doug-martin/goqu)
+and [sqlx](https://github.com/jmoiron/sqlx) users.
 
 # What is generated?
 
@@ -34,11 +35,14 @@ Define a db-model.
 
 Rules:
 
-- model must have one field marked as primary key via adding option  `primary` for tag `db`
+- model must have one field marked as primary key via adding option  `primary`
+  for tag `db`
     - supported field types:
         - standard (`int64`, `string`...)
-        - any other which implements `Scanner` and `Valuer` interfaces (ex: github.com/google/uuid)
-- if model primary key field value is database-side generated `int64` - use `auto` option for tag `db` 
+        - any other which implements `Scanner` and `Valuer` interfaces (ex:
+          github.com/google/uuid)
+- if model primary key field value is database-side generated `int64` -
+  use `auto` option for tag `db`
 - generated file will be placed near model definition
 
 See examples for mode info.
@@ -52,4 +56,5 @@ See [./examples](./examples) folder.
 - [ ] tests
 - [ ] tests with mysql in docker
 - [ ] string field maxlen rule by annotation?
-- [x] ~~new flag allowed customising `WithTran` method name.~~ (`-rename-with-tran`)
+- [x] ~~new flag allowed customising `WithTran` method
+  name.~~ (`-rename-with-tran`)

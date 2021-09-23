@@ -9,6 +9,7 @@ type (
 		db          *sqlx.DB
 		dialect     goqu.DialectWrapper
 		dialectName string
+		options     RepositoryOpt
 
 		// short for "table"
 		t string
@@ -30,10 +31,10 @@ func (s *{{ .Repo.Name|Private }}Fields) PK() exp.IdentifierExpression {
 // New{{ .Repo.Name }} returns a new {{ .Repo.Name }}.
 //
 // Note: dont forget to set max open connections and max lifetime.
-func New{{ .Repo.Name }}(dsn string) *{{ .Repo.Name }} {
+func New{{ .Repo.Name }}(dsn string, opt...RepositoryOption) *{{ .Repo.Name }} {
 	const t = "{{ .Repo.Table }}"
 
-	return &{{ .Repo.Name }}{
+	s := &{{ .Repo.Name }}{
 		dsn:         dsn,
 		dialect:     goqu.Dialect("{{ .Repo.Dialect }}"),
 		dialectName: "{{ .Repo.Dialect }}",
@@ -43,7 +44,16 @@ func New{{ .Repo.Name }}(dsn string) *{{ .Repo.Name }} {
 				{{- $field.Name }}: goqu.C("{{ $field.ColName }}").Table(t),
 			{{ end }}
 		},
+		options: RepositoryOpt{
+			TxGetter: GetTxFromContext,
+		},
 	}
+
+	for _, o := range opt {
+		o(&s.options)
+	}
+
+	return s
 }
 
 // {{ .Repo.Name }}WithInstance returns a new {{ .Repo.Name }} with specified sqlx.DB instance.
@@ -114,5 +124,9 @@ func (s *{{ .Repo.Name }}) SetConnMaxLifetime(d time.Duration) {
 // {{.WithTranName}} wraps function call in transaction.
 func (s *{{ .Repo.Name }}) {{.WithTranName}}(ctx context.Context, f func(ctx context.Context) error) error {
 	return Transaction(ctx, s.db, f)
+}
+
+func (s *{{ .Repo.Name }}) getTxFromContext(ctx context.Context) (*sqlx.Tx, error) {
+	return s.options.TxGetter(ctx)
 }
 `
