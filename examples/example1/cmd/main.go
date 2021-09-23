@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"example1/model"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/jmoiron/sqlx"
 	"log"
 	"time"
+
+	"example1/model"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
 )
 
 const (

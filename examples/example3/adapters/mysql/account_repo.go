@@ -21,6 +21,7 @@ type (
 		db          *sqlx.DB
 		dialect     goqu.DialectWrapper
 		dialectName string
+		options     RepositoryOpt
 
 		// short for "table"
 		t string
@@ -42,10 +43,10 @@ func (s *accountRepoFields) PK() exp.IdentifierExpression {
 // NewAccountRepo returns a new AccountRepo.
 //
 // Note: dont forget to set max open connections and max lifetime.
-func NewAccountRepo(dsn string) *AccountRepo {
+func NewAccountRepo(dsn string, opt ...RepositoryOption) *AccountRepo {
 	const t = "account"
 
-	return &AccountRepo{
+	s := &AccountRepo{
 		dsn:         dsn,
 		dialect:     goqu.Dialect("mysql"),
 		dialectName: "mysql",
@@ -55,7 +56,16 @@ func NewAccountRepo(dsn string) *AccountRepo {
 			Login:        goqu.C("login").Table(t),
 			PasswordHash: goqu.C("pass").Table(t),
 		},
+		options: RepositoryOpt{
+			TxGetter: GetTxFromContext,
+		},
 	}
+
+	for _, o := range opt {
+		o(&s.options)
+	}
+
+	return s
 }
 
 // Connect connects to database instance.
@@ -107,12 +117,16 @@ func (s *AccountRepo) WithTran(ctx context.Context, f func(ctx context.Context) 
 	return Transaction(ctx, s.db, f)
 }
 
+func (s *AccountRepo) getTxFromContext(ctx context.Context) (*sqlx.Tx, error) {
+	return s.options.TxGetter(ctx)
+}
+
 // Create creates a new row in database by specified model.
 //
 // If model have "auto" primary key field - it's will be updated in-place.
 func (s *AccountRepo) Create(ctx context.Context, m *Account) error {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -143,7 +157,7 @@ func (s *AccountRepo) iter(
 	opt ...Option,
 ) error {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -253,7 +267,7 @@ func (s *AccountRepo) GetManySlice(ctx context.Context, ids []uuid.UUID, opt ...
 // Update updates database row by model.
 func (s *AccountRepo) Update(ctx context.Context, m Account) error {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -283,7 +297,7 @@ func (s *AccountRepo) Update(ctx context.Context, m Account) error {
 // See also: DeleteMany.
 func (s *AccountRepo) Delete(ctx context.Context, id uuid.UUID) (n int64, err error) {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -317,7 +331,7 @@ func (s *AccountRepo) DeleteMany(ctx context.Context, ids []uuid.UUID) (n int64,
 		return 0, nil
 	}
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}

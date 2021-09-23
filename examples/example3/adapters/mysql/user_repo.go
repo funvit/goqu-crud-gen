@@ -2,11 +2,12 @@ package mysql
 
 import (
 	"context"
-	"example3/domain"
 	"fmt"
+	"time"
+
+	"example3/domain"
 	. "github.com/funvit/goqu-crud-gen"
 	"github.com/google/uuid"
-	"time"
 )
 
 type UserRepo struct {
