@@ -46,22 +46,43 @@ func New{{ .Repo.Name }}(dsn string) *{{ .Repo.Name }} {
 	}
 }
 
+// {{ .Repo.Name }}WithInstance returns a new {{ .Repo.Name }} with specified sqlx.DB instance.
+func {{ .Repo.Name }}WithInstance(inst *sqlx.DB) *{{ .Repo.Name }} {
+
+	const t = "{{ .Repo.Table }}"
+
+	return &{{ .Repo.Name }}{
+		dsn:         "",
+		db:          inst,
+		dialect:     goqu.Dialect("{{ .Repo.Dialect }}"),
+		dialectName: "{{ .Repo.Dialect }}",
+		t:           t,
+		f: {{ .Repo.Name|Private }}Fields{
+			{{ range $field := .Model.Fields }}
+				{{- $field.Name }}: goqu.C("{{ $field.ColName }}").Table(t),
+			{{ end }}
+		},
+	}
+}
+
 // Connect connects to database instance.
 // Must be called after New{{ .Repo.Name }} and before any repo methods.
 func (s *{{ .Repo.Name }}) Connect(wait time.Duration) error {
-	db, err := sqlx.Open(s.dialectName, s.dsn)
-	if err != nil {
-		return err
+
+	if s.dsn != "" {
+		db, err := sqlx.Open(s.dialectName, s.dsn)
+		if err != nil {
+			return err
+		}
+		s.db = db
 	}
 
 	pCtx, pCancel := context.WithTimeout(context.Background(), wait)
 	defer pCancel()
-	err = db.PingContext(pCtx)
+	err := s.db.PingContext(pCtx)
 	if err != nil {
 		return fmt.Errorf("ping error: %w", err)
 	}
-
-	s.db = db
 
 	return nil
 }

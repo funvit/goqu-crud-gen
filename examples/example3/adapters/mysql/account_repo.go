@@ -58,22 +58,43 @@ func NewAccountRepo(dsn string) *AccountRepo {
 	}
 }
 
+// AccountRepoWithInstance returns a new AccountRepo with specified sqlx.DB instance.
+func AccountRepoWithInstance(inst *sqlx.DB) *AccountRepo {
+
+	const t = "account"
+
+	return &AccountRepo{
+		dsn:         "",
+		db:          inst,
+		dialect:     goqu.Dialect("mysql"),
+		dialectName: "mysql",
+		t:           t,
+		f: accountRepoFields{
+			UserId:       goqu.C("user_id").Table(t),
+			Login:        goqu.C("login").Table(t),
+			PasswordHash: goqu.C("pass").Table(t),
+		},
+	}
+}
+
 // Connect connects to database instance.
 // Must be called after NewAccountRepo and before any repo methods.
 func (s *AccountRepo) Connect(wait time.Duration) error {
-	db, err := sqlx.Open(s.dialectName, s.dsn)
-	if err != nil {
-		return err
+
+	if s.dsn != "" {
+		db, err := sqlx.Open(s.dialectName, s.dsn)
+		if err != nil {
+			return err
+		}
+		s.db = db
 	}
 
 	pCtx, pCancel := context.WithTimeout(context.Background(), wait)
 	defer pCancel()
-	err = db.PingContext(pCtx)
+	err := s.db.PingContext(pCtx)
 	if err != nil {
 		return fmt.Errorf("ping error: %w", err)
 	}
-
-	s.db = db
 
 	return nil
 }

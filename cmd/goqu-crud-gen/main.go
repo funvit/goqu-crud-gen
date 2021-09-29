@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/fatih/structtag"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -20,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+
+	"github.com/fatih/structtag"
 )
 
 const ( //known dialects
