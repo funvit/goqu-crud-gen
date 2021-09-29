@@ -8,11 +8,11 @@ build:
 install:
 	go install ./cmd/...
 
+.PNONY:gen-examples
+gen-examples:
+	cd ./examples/example1/ && go generate ./... && go vet ./...
+	cd ./examples/example2/ && go generate ./... && go vet ./...
+	cd ./examples/example3/ && go generate ./... && go vet ./...
 
-.PHONY:generate-examples
-generate-examples:
-	go generate ./examples/example1/model/user.go
-	go generate ./examples/example2/user.go
-	go generate ./examples/example3/adapters/mysql/account.go
-	go generate ./examples/example3/adapters/mysql/user_public_fields.go
-	go vet ./examples/...
+.PHONY:before-commit
+before-commit: build install gen-examples

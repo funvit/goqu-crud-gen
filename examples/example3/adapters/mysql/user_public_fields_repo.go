@@ -21,6 +21,7 @@ type (
 		db          *sqlx.DB
 		dialect     goqu.DialectWrapper
 		dialectName string
+		options     RepositoryOpt
 
 		// short for "table"
 		t string
@@ -41,10 +42,10 @@ func (s *userPublicFieldsRepoFields) PK() exp.IdentifierExpression {
 // NewUserPublicFieldsRepo returns a new UserPublicFieldsRepo.
 //
 // Note: dont forget to set max open connections and max lifetime.
-func NewUserPublicFieldsRepo(dsn string) *UserPublicFieldsRepo {
+func NewUserPublicFieldsRepo(dsn string, opt ...RepositoryOption) *UserPublicFieldsRepo {
 	const t = "user"
 
-	return &UserPublicFieldsRepo{
+	s := &UserPublicFieldsRepo{
 		dsn:         dsn,
 		dialect:     goqu.Dialect("mysql"),
 		dialectName: "mysql",
@@ -53,15 +54,24 @@ func NewUserPublicFieldsRepo(dsn string) *UserPublicFieldsRepo {
 			Id:   goqu.C("id").Table(t),
 			Name: goqu.C("name").Table(t),
 		},
+		options: RepositoryOpt{
+			TxGetter: GetTxFromContext,
+		},
 	}
+
+	for _, o := range opt {
+		o(&s.options)
+	}
+
+	return s
 }
 
 // UserPublicFieldsRepoWithInstance returns a new UserPublicFieldsRepo with specified sqlx.DB instance.
-func UserPublicFieldsRepoWithInstance(inst *sqlx.DB) *UserPublicFieldsRepo {
+func UserPublicFieldsRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *UserPublicFieldsRepo {
 
 	const t = "user"
 
-	return &UserPublicFieldsRepo{
+	s := &UserPublicFieldsRepo{
 		dsn:         "",
 		db:          inst,
 		dialect:     goqu.Dialect("mysql"),
@@ -71,7 +81,16 @@ func UserPublicFieldsRepoWithInstance(inst *sqlx.DB) *UserPublicFieldsRepo {
 			Id:   goqu.C("id").Table(t),
 			Name: goqu.C("name").Table(t),
 		},
+		options: RepositoryOpt{
+			TxGetter: GetTxFromContext,
+		},
 	}
+
+	for _, o := range opt {
+		o(&s.options)
+	}
+
+	return s
 }
 
 // Connect connects to database instance.
@@ -125,12 +144,16 @@ func (s *UserPublicFieldsRepo) WithTran(ctx context.Context, f func(ctx context.
 	return Transaction(ctx, s.db, f)
 }
 
+func (s *UserPublicFieldsRepo) getTxFromContext(ctx context.Context) (*sqlx.Tx, error) {
+	return s.options.TxGetter(ctx)
+}
+
 // _Create creates a new row in database by specified model.
 //
 // If model have "auto" primary key field - it's will be updated in-place.
 func (s *UserPublicFieldsRepo) _Create(ctx context.Context, m *UserPublicFields) error {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -161,7 +184,7 @@ func (s *UserPublicFieldsRepo) iter(
 	opt ...Option,
 ) error {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -271,7 +294,7 @@ func (s *UserPublicFieldsRepo) _GetManySlice(ctx context.Context, ids []uuid.UUI
 // _Update updates database row by model.
 func (s *UserPublicFieldsRepo) _Update(ctx context.Context, m UserPublicFields) error {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -301,7 +324,7 @@ func (s *UserPublicFieldsRepo) _Update(ctx context.Context, m UserPublicFields) 
 // See also: _DeleteMany.
 func (s *UserPublicFieldsRepo) _Delete(ctx context.Context, id uuid.UUID) (n int64, err error) {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -335,7 +358,7 @@ func (s *UserPublicFieldsRepo) _DeleteMany(ctx context.Context, ids []uuid.UUID)
 		return 0, nil
 	}
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}

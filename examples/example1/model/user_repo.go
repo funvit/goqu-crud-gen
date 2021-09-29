@@ -20,6 +20,7 @@ type (
 		db          *sqlx.DB
 		dialect     goqu.DialectWrapper
 		dialectName string
+		options     RepositoryOpt
 
 		// short for "table"
 		t string
@@ -41,10 +42,10 @@ func (s *userRepoFields) PK() exp.IdentifierExpression {
 // NewUserRepo returns a new UserRepo.
 //
 // Note: dont forget to set max open connections and max lifetime.
-func NewUserRepo(dsn string) *UserRepo {
+func NewUserRepo(dsn string, opt ...RepositoryOption) *UserRepo {
 	const t = "user"
 
-	return &UserRepo{
+	s := &UserRepo{
 		dsn:         dsn,
 		dialect:     goqu.Dialect("mysql"),
 		dialectName: "mysql",
@@ -54,15 +55,24 @@ func NewUserRepo(dsn string) *UserRepo {
 			Name:  goqu.C("name").Table(t),
 			Email: goqu.C("email").Table(t),
 		},
+		options: RepositoryOpt{
+			TxGetter: GetTxFromContext,
+		},
 	}
+
+	for _, o := range opt {
+		o(&s.options)
+	}
+
+	return s
 }
 
 // UserRepoWithInstance returns a new UserRepo with specified sqlx.DB instance.
-func UserRepoWithInstance(inst *sqlx.DB) *UserRepo {
+func UserRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *UserRepo {
 
 	const t = "user"
 
-	return &UserRepo{
+	s := &UserRepo{
 		dsn:         "",
 		db:          inst,
 		dialect:     goqu.Dialect("mysql"),
@@ -73,7 +83,16 @@ func UserRepoWithInstance(inst *sqlx.DB) *UserRepo {
 			Name:  goqu.C("name").Table(t),
 			Email: goqu.C("email").Table(t),
 		},
+		options: RepositoryOpt{
+			TxGetter: GetTxFromContext,
+		},
 	}
+
+	for _, o := range opt {
+		o(&s.options)
+	}
+
+	return s
 }
 
 // Connect connects to database instance.
@@ -127,12 +146,16 @@ func (s *UserRepo) WithTran(ctx context.Context, f func(ctx context.Context) err
 	return Transaction(ctx, s.db, f)
 }
 
+func (s *UserRepo) getTxFromContext(ctx context.Context) (*sqlx.Tx, error) {
+	return s.options.TxGetter(ctx)
+}
+
 // Create creates a new row in database by specified model.
 //
 // If model have "auto" primary key field - it's will be updated in-place.
 func (s *UserRepo) Create(ctx context.Context, m *User) error {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -168,7 +191,7 @@ func (s *UserRepo) iter(
 	opt ...Option,
 ) error {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -278,7 +301,7 @@ func (s *UserRepo) GetManySlice(ctx context.Context, ids []int64, opt ...Option)
 // Update updates database row by model.
 func (s *UserRepo) Update(ctx context.Context, m User) error {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -308,7 +331,7 @@ func (s *UserRepo) Update(ctx context.Context, m User) error {
 // See also: DeleteMany.
 func (s *UserRepo) Delete(ctx context.Context, id int64) (n int64, err error) {
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -342,7 +365,7 @@ func (s *UserRepo) DeleteMany(ctx context.Context, ids []int64) (n int64, err er
 		return 0, nil
 	}
 
-	tx, err := GetTxFromContext(ctx)
+	tx, err := s.getTxFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}
