@@ -73,7 +73,7 @@ func AccountRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *AccountRep
 
 	const t = "account"
 
-	return &AccountRepo{
+	s := &AccountRepo{
 		dsn:         "",
 		db:          inst,
 		dialect:     goqu.Dialect("mysql"),
@@ -88,6 +88,12 @@ func AccountRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *AccountRep
 			TxGetter: GetTxFromContext,
 		},
 	}
+
+	for _, o := range opt {
+		o(&s.options)
+	}
+
+	return s
 }
 
 // Connect connects to database instance.

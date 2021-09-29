@@ -71,7 +71,7 @@ func UserPublicFieldsRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *U
 
 	const t = "user"
 
-	return &UserPublicFieldsRepo{
+	s := &UserPublicFieldsRepo{
 		dsn:         "",
 		db:          inst,
 		dialect:     goqu.Dialect("mysql"),
@@ -85,6 +85,12 @@ func UserPublicFieldsRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *U
 			TxGetter: GetTxFromContext,
 		},
 	}
+
+	for _, o := range opt {
+		o(&s.options)
+	}
+
+	return s
 }
 
 // Connect connects to database instance.

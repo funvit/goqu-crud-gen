@@ -61,7 +61,7 @@ func {{ .Repo.Name }}WithInstance(inst *sqlx.DB, opt...RepositoryOption) *{{ .Re
 
 	const t = "{{ .Repo.Table }}"
 
-	return &{{ .Repo.Name }}{
+	s := &{{ .Repo.Name }}{
 		dsn:         "",
 		db:          inst,
 		dialect:     goqu.Dialect("{{ .Repo.Dialect }}"),
@@ -76,6 +76,12 @@ func {{ .Repo.Name }}WithInstance(inst *sqlx.DB, opt...RepositoryOption) *{{ .Re
 			TxGetter: GetTxFromContext,
 		},
 	}
+
+	for _, o := range opt {
+		o(&s.options)
+	}
+
+	return s
 }
 
 // Connect connects to database instance.

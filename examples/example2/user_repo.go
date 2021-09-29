@@ -73,7 +73,7 @@ func UserRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *UserRepo {
 
 	const t = "user"
 
-	return &UserRepo{
+	s := &UserRepo{
 		dsn:         "",
 		db:          inst,
 		dialect:     goqu.Dialect("mysql"),
@@ -88,6 +88,12 @@ func UserRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *UserRepo {
 			TxGetter: GetTxFromContext,
 		},
 	}
+
+	for _, o := range opt {
+		o(&s.options)
+	}
+
+	return s
 }
 
 // Connect connects to database instance.
