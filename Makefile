@@ -1,6 +1,6 @@
 
 .PHONY:build
-build: gen-examples
+build:
 	go build -o ./bin/goqu-crud-gen ./cmd/goqu-crud-gen
 
 
@@ -10,6 +10,9 @@ install:
 
 .PNONY:gen-examples
 gen-examples:
-	cd ./examples/example1/ && go generate ./...
-	cd ./examples/example2/ && go generate ./...
-	cd ./examples/example3/ && go generate ./...
+	cd ./examples/example1/ && go generate ./... && go vet ./...
+	cd ./examples/example2/ && go generate ./... && go vet ./...
+	cd ./examples/example3/ && go generate ./... && go vet ./...
+
+.PHONY:before-commit
+before-commit: build install gen-examples

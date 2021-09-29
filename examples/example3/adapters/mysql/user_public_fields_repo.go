@@ -67,7 +67,7 @@ func NewUserPublicFieldsRepo(dsn string, opt ...RepositoryOption) *UserPublicFie
 }
 
 // UserPublicFieldsRepoWithInstance returns a new UserPublicFieldsRepo with specified sqlx.DB instance.
-func UserPublicFieldsRepoWithInstance(inst *sqlx.DB) *UserPublicFieldsRepo {
+func UserPublicFieldsRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *UserPublicFieldsRepo {
 
 	const t = "user"
 
@@ -80,6 +80,9 @@ func UserPublicFieldsRepoWithInstance(inst *sqlx.DB) *UserPublicFieldsRepo {
 		f: userPublicFieldsRepoFields{
 			Id:   goqu.C("id").Table(t),
 			Name: goqu.C("name").Table(t),
+		},
+		options: RepositoryOpt{
+			TxGetter: GetTxFromContext,
 		},
 	}
 }

@@ -69,7 +69,7 @@ func NewAccountRepo(dsn string, opt ...RepositoryOption) *AccountRepo {
 }
 
 // AccountRepoWithInstance returns a new AccountRepo with specified sqlx.DB instance.
-func AccountRepoWithInstance(inst *sqlx.DB) *AccountRepo {
+func AccountRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *AccountRepo {
 
 	const t = "account"
 
@@ -83,6 +83,9 @@ func AccountRepoWithInstance(inst *sqlx.DB) *AccountRepo {
 			UserId:       goqu.C("user_id").Table(t),
 			Login:        goqu.C("login").Table(t),
 			PasswordHash: goqu.C("pass").Table(t),
+		},
+		options: RepositoryOpt{
+			TxGetter: GetTxFromContext,
 		},
 	}
 }

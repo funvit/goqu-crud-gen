@@ -24,7 +24,7 @@ type RepositoryOpt struct {
 	TxGetter func(ctx context.Context) (*sqlx.Tx, error)
 }
 
-// WithTxGetter option used to set custom transaction getter.
+// WithTxGetter option used to set custom transaction getter from context.
 func WithTxGetter(fn func(ctx context.Context) (*sqlx.Tx, error)) RepositoryOption {
 	return func(o *RepositoryOpt) {
 		o.TxGetter = fn

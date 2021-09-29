@@ -57,7 +57,7 @@ func New{{ .Repo.Name }}(dsn string, opt...RepositoryOption) *{{ .Repo.Name }} {
 }
 
 // {{ .Repo.Name }}WithInstance returns a new {{ .Repo.Name }} with specified sqlx.DB instance.
-func {{ .Repo.Name }}WithInstance(inst *sqlx.DB) *{{ .Repo.Name }} {
+func {{ .Repo.Name }}WithInstance(inst *sqlx.DB, opt...RepositoryOption) *{{ .Repo.Name }} {
 
 	const t = "{{ .Repo.Table }}"
 
@@ -71,6 +71,9 @@ func {{ .Repo.Name }}WithInstance(inst *sqlx.DB) *{{ .Repo.Name }} {
 			{{ range $field := .Model.Fields }}
 				{{- $field.Name }}: goqu.C("{{ $field.ColName }}").Table(t),
 			{{ end }}
+		},
+		options: RepositoryOpt{
+			TxGetter: GetTxFromContext,
 		},
 	}
 }

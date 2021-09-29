@@ -68,7 +68,7 @@ func NewUserRepo(dsn string, opt ...RepositoryOption) *UserRepo {
 }
 
 // UserRepoWithInstance returns a new UserRepo with specified sqlx.DB instance.
-func UserRepoWithInstance(inst *sqlx.DB) *UserRepo {
+func UserRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *UserRepo {
 
 	const t = "user"
 
@@ -82,6 +82,9 @@ func UserRepoWithInstance(inst *sqlx.DB) *UserRepo {
 			Id:    goqu.C("id").Table(t),
 			Name:  goqu.C("name").Table(t),
 			Email: goqu.C("email").Table(t),
+		},
+		options: RepositoryOpt{
+			TxGetter: GetTxFromContext,
 		},
 	}
 }
