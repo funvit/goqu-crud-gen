@@ -57,22 +57,43 @@ func NewUserRepo(dsn string) *UserRepo {
 	}
 }
 
+// UserRepoWithInstance returns a new UserRepo with specified sqlx.DB instance.
+func UserRepoWithInstance(inst *sqlx.DB) *UserRepo {
+
+	const t = "user"
+
+	return &UserRepo{
+		dsn:         "",
+		db:          inst,
+		dialect:     goqu.Dialect("mysql"),
+		dialectName: "mysql",
+		t:           t,
+		f: userRepoFields{
+			Id:    goqu.C("id").Table(t),
+			Name:  goqu.C("name").Table(t),
+			Email: goqu.C("email").Table(t),
+		},
+	}
+}
+
 // Connect connects to database instance.
 // Must be called after NewUserRepo and before any repo methods.
 func (s *UserRepo) Connect(wait time.Duration) error {
-	db, err := sqlx.Open(s.dialectName, s.dsn)
-	if err != nil {
-		return err
+
+	if s.dsn != "" {
+		db, err := sqlx.Open(s.dialectName, s.dsn)
+		if err != nil {
+			return err
+		}
+		s.db = db
 	}
 
 	pCtx, pCancel := context.WithTimeout(context.Background(), wait)
 	defer pCancel()
-	err = db.PingContext(pCtx)
+	err := s.db.PingContext(pCtx)
 	if err != nil {
 		return fmt.Errorf("ping error: %w", err)
 	}
-
-	s.db = db
 
 	return nil
 }
