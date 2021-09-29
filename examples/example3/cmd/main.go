@@ -2,14 +2,15 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"time"
+
 	"example3/adapters/mysql"
 	"example3/domain"
-	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"log"
-	"time"
 )
 
 const (
