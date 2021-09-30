@@ -32,14 +32,9 @@ type (
 	}
 )
 
-// PK returns primary key column identifier.
-func (s *{{ .Repo.Name|Private }}Fields) PK() exp.IdentifierExpression {
-	return s.{{ .Model.GetPrimaryKeyField.Name }}
-}
-
 // New{{ .Repo.Name }} returns a new {{ .Repo.Name }}.
 //
-// Note: dont forget to set max open connections and max lifetime.
+// Note: do not forget to set max open connections and max lifetime.
 func New{{ .Repo.Name }}(dsn string, opt...RepositoryOption) *{{ .Repo.Name }} {
 	const t = "{{ .Repo.Table }}"
 
@@ -58,9 +53,9 @@ func New{{ .Repo.Name }}(dsn string, opt...RepositoryOption) *{{ .Repo.Name }} {
 				{{- $field.Name }}: "{{ $field.ColName }}",
 			{{ end }}
 		},
-		options: RepositoryOpt{
-			TxGetter: GetTxFromContext,
-		},
+	}
+	s.options.CtxTran = &SqlxCtxTran{
+		DB: s.db,
 	}
 
 	for _, o := range opt {
@@ -91,9 +86,9 @@ func {{ .Repo.Name }}WithInstance(inst *sqlx.DB, opt...RepositoryOption) *{{ .Re
 				{{- $field.Name }}: "{{ $field.ColName }}",
 			{{ end }}
 		},
-		options: RepositoryOpt{
-			TxGetter: GetTxFromContext,
-		},
+	}
+	s.options.CtxTran = &SqlxCtxTran{
+		DB: s.db,
 	}
 
 	for _, o := range opt {
@@ -101,6 +96,11 @@ func {{ .Repo.Name }}WithInstance(inst *sqlx.DB, opt...RepositoryOption) *{{ .Re
 	}
 
 	return s
+}
+
+// PK returns primary key column identifier.
+func (s *{{ .Repo.Name|Private }}Fields) PK() exp.IdentifierExpression {
+	return s.{{ .Model.GetPrimaryKeyField.Name }}
 }
 
 // Connect connects to database instance.
@@ -117,9 +117,14 @@ func (s *{{ .Repo.Name }}) Connect(wait time.Duration) error {
 
 	pCtx, pCancel := context.WithTimeout(context.Background(), wait)
 	defer pCancel()
+
 	err := s.db.PingContext(pCtx)
 	if err != nil {
 		return fmt.Errorf("ping error: %w", err)
+	}
+
+	if v, ok := s.options.CtxTran.(*SqlxCtxTran); ok && v.DB == nil {
+		v.DB = s.db
 	}
 
 	return nil
@@ -151,10 +156,14 @@ func (s *{{ .Repo.Name }}) SetConnMaxLifetime(d time.Duration) {
 
 // {{.WithTranName}} wraps function call in transaction.
 func (s *{{ .Repo.Name }}) {{.WithTranName}}(ctx context.Context, f func(ctx context.Context) error) error {
-	return Transaction(ctx, s.db, f)
+
+	return Transaction(ctx, s.options.CtxTran, f)
 }
 
-func (s *{{ .Repo.Name }}) getTxFromContext(ctx context.Context) (*sqlx.Tx, error) {
-	return s.options.TxGetter(ctx)
+// Each query must executed within transaction. This method gets 
+// transaction from context, so exists transaction can be used.
+func (s *{{ .Repo.Name }}) txFromContext(ctx context.Context) (*sqlx.Tx, error) {
+
+	return s.options.CtxTran.TxFromContext(ctx)
 }
 `

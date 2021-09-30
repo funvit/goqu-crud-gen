@@ -5,7 +5,7 @@ const updateTpl = `
 // {{"Update"|CRUD}} updates database row by model.
 func (s *{{.Repo.Name}}) {{"Update"|CRUD}}(ctx context.Context, m {{.Model.Name}}) error {
 
-	tx, err := s.getTxFromContext(ctx)
+	tx, err := s.txFromContext(ctx)
 	if err != nil {
 		return err
 	}

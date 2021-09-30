@@ -13,8 +13,8 @@ const ctxTxKey = ctxTxKeyType("repo.sqlx.tx")
 
 var ErrNoTranInContext = fmt.Errorf("no transaction in context")
 
-// GetTxFromContext gets started transaction from context.
-func GetTxFromContext(ctx context.Context) (*sqlx.Tx, error) {
+// TxFromContext gets started transaction from context.
+func TxFromContext(ctx context.Context) (*sqlx.Tx, error) {
 	v := ctx.Value(ctxTxKey)
 	if v == nil {
 		return nil, ErrNoTranInContext
@@ -32,7 +32,7 @@ func GetTxFromContext(ctx context.Context) (*sqlx.Tx, error) {
 //
 // Example:
 //
-//    err := Transaction(ctx, db, func(ctx context.Context) error {
+//    err := Transaction(ctx, ct, func(ctx context.Context) error {
 //        m, err := ...
 //        if err != nil {
 //            return err
@@ -42,15 +42,16 @@ func GetTxFromContext(ctx context.Context) (*sqlx.Tx, error) {
 //        return ...
 //    })
 //
-func Transaction(ctx context.Context, db *sqlx.DB, f func(ctx context.Context) error) error {
+// Special method for generated repositories.
+func Transaction(ctx context.Context, ct CtxTransaction, f func(ctx context.Context) error) error {
 	// if tx already in ctx - use it
-	tx, err := GetTxFromContext(ctx)
+	tx, err := ct.TxFromContext(ctx)
 	if err == nil && tx != nil {
 		return f(ctx)
 	}
 
 	// new tx
-	tx, err = db.BeginTxx(ctx, nil)
+	tx, err = ct.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
