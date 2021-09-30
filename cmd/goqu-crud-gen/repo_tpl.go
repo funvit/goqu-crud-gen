@@ -11,14 +11,23 @@ type (
 		dialectName string
 		options     RepositoryOpt
 
-		// short for "table"
+		// Short for "table".
 		t string
-		// short for "table fields"
+		// Short for "table fields", holds repository model fields as goqu exp.IdentifierExpression.
 		f {{ .Repo.Name|Private }}Fields
+		// Short for "table columns", holds repository model columns as string.
+		//
+		// Helps to write goqu.UpdateDataset with goqu.Record{}.
+		c {{ .Repo.Name|Private }}Columns
 	}
 	{{ .Repo.Name|Private }}Fields struct {
 		{{ range $field := .Model.Fields }}
 			{{- $field.Name }} exp.IdentifierExpression
+		{{ end }}
+	}
+	{{ .Repo.Name|Private }}Columns struct {
+		{{ range $field := .Model.Fields }}
+			{{- $field.Name }} string
 		{{ end }}
 	}
 )
@@ -42,6 +51,11 @@ func New{{ .Repo.Name }}(dsn string, opt...RepositoryOption) *{{ .Repo.Name }} {
 		f: {{ .Repo.Name|Private }}Fields{
 			{{ range $field := .Model.Fields }}
 				{{- $field.Name }}: goqu.C("{{ $field.ColName }}").Table(t),
+			{{ end }}
+		},
+		c: {{ .Repo.Name|Private }}Columns{
+			{{ range $field := .Model.Fields }}
+				{{- $field.Name }}: "{{ $field.ColName }}",
 			{{ end }}
 		},
 		options: RepositoryOpt{
@@ -70,6 +84,11 @@ func {{ .Repo.Name }}WithInstance(inst *sqlx.DB, opt...RepositoryOption) *{{ .Re
 		f: {{ .Repo.Name|Private }}Fields{
 			{{ range $field := .Model.Fields }}
 				{{- $field.Name }}: goqu.C("{{ $field.ColName }}").Table(t),
+			{{ end }}
+		},
+		c: {{ .Repo.Name|Private }}Columns{
+			{{ range $field := .Model.Fields }}
+				{{- $field.Name }}: "{{ $field.ColName }}",
 			{{ end }}
 		},
 		options: RepositoryOpt{
