@@ -23,15 +23,24 @@ type (
 		dialectName string
 		options     RepositoryOpt
 
-		// short for "table"
+		// Short for "table".
 		t string
-		// short for "table fields"
+		// Short for "table fields", holds repository model fields as goqu exp.IdentifierExpression.
 		f accountRepoFields
+		// Short for "table columns", holds repository model columns as string.
+		//
+		// Helps to write goqu.UpdateDataset with goqu.Record{}.
+		c accountRepoColumns
 	}
 	accountRepoFields struct {
 		UserId       exp.IdentifierExpression
 		Login        exp.IdentifierExpression
 		PasswordHash exp.IdentifierExpression
+	}
+	accountRepoColumns struct {
+		UserId       string
+		Login        string
+		PasswordHash string
 	}
 )
 
@@ -55,6 +64,11 @@ func NewAccountRepo(dsn string, opt ...RepositoryOption) *AccountRepo {
 			UserId:       goqu.C("user_id").Table(t),
 			Login:        goqu.C("login").Table(t),
 			PasswordHash: goqu.C("pass").Table(t),
+		},
+		c: accountRepoColumns{
+			UserId:       "user_id",
+			Login:        "login",
+			PasswordHash: "pass",
 		},
 		options: RepositoryOpt{
 			TxGetter: GetTxFromContext,
@@ -83,6 +97,11 @@ func AccountRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *AccountRep
 			UserId:       goqu.C("user_id").Table(t),
 			Login:        goqu.C("login").Table(t),
 			PasswordHash: goqu.C("pass").Table(t),
+		},
+		c: accountRepoColumns{
+			UserId:       "user_id",
+			Login:        "login",
+			PasswordHash: "pass",
 		},
 		options: RepositoryOpt{
 			TxGetter: GetTxFromContext,

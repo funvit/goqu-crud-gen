@@ -23,14 +23,22 @@ type (
 		dialectName string
 		options     RepositoryOpt
 
-		// short for "table"
+		// Short for "table".
 		t string
-		// short for "table fields"
+		// Short for "table fields", holds repository model fields as goqu exp.IdentifierExpression.
 		f userPublicFieldsRepoFields
+		// Short for "table columns", holds repository model columns as string.
+		//
+		// Helps to write goqu.UpdateDataset with goqu.Record{}.
+		c userPublicFieldsRepoColumns
 	}
 	userPublicFieldsRepoFields struct {
 		Id   exp.IdentifierExpression
 		Name exp.IdentifierExpression
+	}
+	userPublicFieldsRepoColumns struct {
+		Id   string
+		Name string
 	}
 )
 
@@ -53,6 +61,10 @@ func NewUserPublicFieldsRepo(dsn string, opt ...RepositoryOption) *UserPublicFie
 		f: userPublicFieldsRepoFields{
 			Id:   goqu.C("id").Table(t),
 			Name: goqu.C("name").Table(t),
+		},
+		c: userPublicFieldsRepoColumns{
+			Id:   "id",
+			Name: "name",
 		},
 		options: RepositoryOpt{
 			TxGetter: GetTxFromContext,
@@ -80,6 +92,10 @@ func UserPublicFieldsRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *U
 		f: userPublicFieldsRepoFields{
 			Id:   goqu.C("id").Table(t),
 			Name: goqu.C("name").Table(t),
+		},
+		c: userPublicFieldsRepoColumns{
+			Id:   "id",
+			Name: "name",
 		},
 		options: RepositoryOpt{
 			TxGetter: GetTxFromContext,
