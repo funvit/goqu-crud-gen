@@ -66,7 +66,7 @@ func NewUserRepo(dsn string, opt ...RepositoryOption) *UserRepo {
 			Email: "email",
 		},
 	}
-	s.options.CtxTran = &SqlxCtxTran{
+	s.options.CtxTran = &StdCtxTran{
 		DB: s.db,
 	}
 
@@ -99,7 +99,7 @@ func UserRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *UserRepo {
 			Email: "email",
 		},
 	}
-	s.options.CtxTran = &SqlxCtxTran{
+	s.options.CtxTran = &StdCtxTran{
 		DB: s.db,
 	}
 
@@ -135,7 +135,7 @@ func (s *UserRepo) Connect(wait time.Duration) error {
 		return fmt.Errorf("ping error: %w", err)
 	}
 
-	if v, ok := s.options.CtxTran.(*SqlxCtxTran); ok && v.DB == nil {
+	if v, ok := s.options.CtxTran.(*StdCtxTran); ok && v.DB == nil {
 		v.DB = s.db
 	}
 
@@ -169,7 +169,7 @@ func (s *UserRepo) SetConnMaxLifetime(d time.Duration) {
 // WithTran wraps function call in transaction.
 func (s *UserRepo) WithTran(ctx context.Context, f func(ctx context.Context) error) error {
 
-	return Transaction(ctx, s.options.CtxTran, f)
+	return Transaction(ctx, s.db, s.options.CtxTran, f)
 }
 
 // Each query must executed within transaction. This method gets

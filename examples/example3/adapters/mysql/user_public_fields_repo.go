@@ -62,7 +62,7 @@ func NewUserPublicFieldsRepo(dsn string, opt ...RepositoryOption) *UserPublicFie
 			Name: "name",
 		},
 	}
-	s.options.CtxTran = &SqlxCtxTran{
+	s.options.CtxTran = &StdCtxTran{
 		DB: s.db,
 	}
 
@@ -93,7 +93,7 @@ func UserPublicFieldsRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *U
 			Name: "name",
 		},
 	}
-	s.options.CtxTran = &SqlxCtxTran{
+	s.options.CtxTran = &StdCtxTran{
 		DB: s.db,
 	}
 
@@ -129,7 +129,7 @@ func (s *UserPublicFieldsRepo) Connect(wait time.Duration) error {
 		return fmt.Errorf("ping error: %w", err)
 	}
 
-	if v, ok := s.options.CtxTran.(*SqlxCtxTran); ok && v.DB == nil {
+	if v, ok := s.options.CtxTran.(*StdCtxTran); ok && v.DB == nil {
 		v.DB = s.db
 	}
 
@@ -163,7 +163,7 @@ func (s *UserPublicFieldsRepo) SetConnMaxLifetime(d time.Duration) {
 // WithTran wraps function call in transaction.
 func (s *UserPublicFieldsRepo) WithTran(ctx context.Context, f func(ctx context.Context) error) error {
 
-	return Transaction(ctx, s.options.CtxTran, f)
+	return Transaction(ctx, s.db, s.options.CtxTran, f)
 }
 
 // Each query must executed within transaction. This method gets

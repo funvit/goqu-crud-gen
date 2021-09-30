@@ -54,7 +54,7 @@ func New{{ .Repo.Name }}(dsn string, opt...RepositoryOption) *{{ .Repo.Name }} {
 			{{ end }}
 		},
 	}
-	s.options.CtxTran = &SqlxCtxTran{
+	s.options.CtxTran = &StdCtxTran{
 		DB: s.db,
 	}
 
@@ -87,7 +87,7 @@ func {{ .Repo.Name }}WithInstance(inst *sqlx.DB, opt...RepositoryOption) *{{ .Re
 			{{ end }}
 		},
 	}
-	s.options.CtxTran = &SqlxCtxTran{
+	s.options.CtxTran = &StdCtxTran{
 		DB: s.db,
 	}
 
@@ -123,7 +123,7 @@ func (s *{{ .Repo.Name }}) Connect(wait time.Duration) error {
 		return fmt.Errorf("ping error: %w", err)
 	}
 
-	if v, ok := s.options.CtxTran.(*SqlxCtxTran); ok && v.DB == nil {
+	if v, ok := s.options.CtxTran.(*StdCtxTran); ok && v.DB == nil {
 		v.DB = s.db
 	}
 
@@ -157,7 +157,7 @@ func (s *{{ .Repo.Name }}) SetConnMaxLifetime(d time.Duration) {
 // {{.WithTranName}} wraps function call in transaction.
 func (s *{{ .Repo.Name }}) {{.WithTranName}}(ctx context.Context, f func(ctx context.Context) error) error {
 
-	return Transaction(ctx, s.options.CtxTran, f)
+	return Transaction(ctx, s.db, s.options.CtxTran, f)
 }
 
 // Each query must executed within transaction. This method gets 
