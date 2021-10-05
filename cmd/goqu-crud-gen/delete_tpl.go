@@ -9,7 +9,7 @@ const deleteTpl = `
 // See also: {{"DeleteMany"|CRUD}}.
 func (s *{{.Repo.Name}}) {{"Delete"|CRUD}}(ctx context.Context, id {{.Model.GetPrimaryKeyField.Type}}) (n int64, err error) {
 
-	tx, err := s.getTxFromContext(ctx)
+	tx, err := s.txFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -43,7 +43,7 @@ func (s *{{ .Repo.Name }}) {{"DeleteMany"|CRUD}}(ctx context.Context, ids []{{.M
 		return 0, nil
 	}
 
-	tx, err := s.getTxFromContext(ctx)
+	tx, err := s.txFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}

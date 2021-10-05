@@ -42,14 +42,9 @@ type (
 	}
 )
 
-// PK returns primary key column identifier.
-func (s *userPublicFieldsRepoFields) PK() exp.IdentifierExpression {
-	return s.Id
-}
-
 // NewUserPublicFieldsRepo returns a new UserPublicFieldsRepo.
 //
-// Note: dont forget to set max open connections and max lifetime.
+// Note: do not forget to set max open connections and max lifetime.
 func NewUserPublicFieldsRepo(dsn string, opt ...RepositoryOption) *UserPublicFieldsRepo {
 	const t = "user"
 
@@ -66,9 +61,9 @@ func NewUserPublicFieldsRepo(dsn string, opt ...RepositoryOption) *UserPublicFie
 			Id:   "id",
 			Name: "name",
 		},
-		options: RepositoryOpt{
-			TxGetter: GetTxFromContext,
-		},
+	}
+	s.options.CtxTran = &StdCtxTran{
+		DB: s.db,
 	}
 
 	for _, o := range opt {
@@ -97,9 +92,9 @@ func UserPublicFieldsRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *U
 			Id:   "id",
 			Name: "name",
 		},
-		options: RepositoryOpt{
-			TxGetter: GetTxFromContext,
-		},
+	}
+	s.options.CtxTran = &StdCtxTran{
+		DB: s.db,
 	}
 
 	for _, o := range opt {
@@ -107,6 +102,11 @@ func UserPublicFieldsRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *U
 	}
 
 	return s
+}
+
+// PK returns primary key column identifier.
+func (s *userPublicFieldsRepoFields) PK() exp.IdentifierExpression {
+	return s.Id
 }
 
 // Connect connects to database instance.
@@ -123,9 +123,14 @@ func (s *UserPublicFieldsRepo) Connect(wait time.Duration) error {
 
 	pCtx, pCancel := context.WithTimeout(context.Background(), wait)
 	defer pCancel()
+
 	err := s.db.PingContext(pCtx)
 	if err != nil {
 		return fmt.Errorf("ping error: %w", err)
+	}
+
+	if v, ok := s.options.CtxTran.(*StdCtxTran); ok && v.DB == nil {
+		v.DB = s.db
 	}
 
 	return nil
@@ -157,11 +162,15 @@ func (s *UserPublicFieldsRepo) SetConnMaxLifetime(d time.Duration) {
 
 // WithTran wraps function call in transaction.
 func (s *UserPublicFieldsRepo) WithTran(ctx context.Context, f func(ctx context.Context) error) error {
-	return Transaction(ctx, s.db, f)
+
+	return Transaction(ctx, s.db, s.options.CtxTran, f)
 }
 
-func (s *UserPublicFieldsRepo) getTxFromContext(ctx context.Context) (*sqlx.Tx, error) {
-	return s.options.TxGetter(ctx)
+// Each query must executed within transaction. This method gets
+// transaction from context, so exists transaction can be used.
+func (s *UserPublicFieldsRepo) txFromContext(ctx context.Context) (*sqlx.Tx, error) {
+
+	return s.options.CtxTran.TxFromContext(ctx)
 }
 
 // _Create creates a new row in database by specified model.
@@ -169,7 +178,7 @@ func (s *UserPublicFieldsRepo) getTxFromContext(ctx context.Context) (*sqlx.Tx, 
 // If model have "auto" primary key field - it's will be updated in-place.
 func (s *UserPublicFieldsRepo) _Create(ctx context.Context, m *UserPublicFields) error {
 
-	tx, err := s.getTxFromContext(ctx)
+	tx, err := s.txFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -200,7 +209,7 @@ func (s *UserPublicFieldsRepo) iter(
 	opt ...Option,
 ) error {
 
-	tx, err := s.getTxFromContext(ctx)
+	tx, err := s.txFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -310,7 +319,7 @@ func (s *UserPublicFieldsRepo) _GetManySlice(ctx context.Context, ids []uuid.UUI
 // _Update updates database row by model.
 func (s *UserPublicFieldsRepo) _Update(ctx context.Context, m UserPublicFields) error {
 
-	tx, err := s.getTxFromContext(ctx)
+	tx, err := s.txFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -340,7 +349,7 @@ func (s *UserPublicFieldsRepo) _Update(ctx context.Context, m UserPublicFields) 
 // See also: _DeleteMany.
 func (s *UserPublicFieldsRepo) _Delete(ctx context.Context, id uuid.UUID) (n int64, err error) {
 
-	tx, err := s.getTxFromContext(ctx)
+	tx, err := s.txFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -374,7 +383,7 @@ func (s *UserPublicFieldsRepo) _DeleteMany(ctx context.Context, ids []uuid.UUID)
 		return 0, nil
 	}
 
-	tx, err := s.getTxFromContext(ctx)
+	tx, err := s.txFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}

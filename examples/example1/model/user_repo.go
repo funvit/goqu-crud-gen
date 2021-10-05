@@ -43,14 +43,9 @@ type (
 	}
 )
 
-// PK returns primary key column identifier.
-func (s *userRepoFields) PK() exp.IdentifierExpression {
-	return s.Id
-}
-
 // NewUserRepo returns a new UserRepo.
 //
-// Note: dont forget to set max open connections and max lifetime.
+// Note: do not forget to set max open connections and max lifetime.
 func NewUserRepo(dsn string, opt ...RepositoryOption) *UserRepo {
 	const t = "user"
 
@@ -69,9 +64,9 @@ func NewUserRepo(dsn string, opt ...RepositoryOption) *UserRepo {
 			Name:  "name",
 			Email: "email",
 		},
-		options: RepositoryOpt{
-			TxGetter: GetTxFromContext,
-		},
+	}
+	s.options.CtxTran = &StdCtxTran{
+		DB: s.db,
 	}
 
 	for _, o := range opt {
@@ -102,9 +97,9 @@ func UserRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *UserRepo {
 			Name:  "name",
 			Email: "email",
 		},
-		options: RepositoryOpt{
-			TxGetter: GetTxFromContext,
-		},
+	}
+	s.options.CtxTran = &StdCtxTran{
+		DB: s.db,
 	}
 
 	for _, o := range opt {
@@ -112,6 +107,11 @@ func UserRepoWithInstance(inst *sqlx.DB, opt ...RepositoryOption) *UserRepo {
 	}
 
 	return s
+}
+
+// PK returns primary key column identifier.
+func (s *userRepoFields) PK() exp.IdentifierExpression {
+	return s.Id
 }
 
 // Connect connects to database instance.
@@ -128,9 +128,14 @@ func (s *UserRepo) Connect(wait time.Duration) error {
 
 	pCtx, pCancel := context.WithTimeout(context.Background(), wait)
 	defer pCancel()
+
 	err := s.db.PingContext(pCtx)
 	if err != nil {
 		return fmt.Errorf("ping error: %w", err)
+	}
+
+	if v, ok := s.options.CtxTran.(*StdCtxTran); ok && v.DB == nil {
+		v.DB = s.db
 	}
 
 	return nil
@@ -162,11 +167,15 @@ func (s *UserRepo) SetConnMaxLifetime(d time.Duration) {
 
 // WithTran wraps function call in transaction.
 func (s *UserRepo) WithTran(ctx context.Context, f func(ctx context.Context) error) error {
-	return Transaction(ctx, s.db, f)
+
+	return Transaction(ctx, s.db, s.options.CtxTran, f)
 }
 
-func (s *UserRepo) getTxFromContext(ctx context.Context) (*sqlx.Tx, error) {
-	return s.options.TxGetter(ctx)
+// Each query must executed within transaction. This method gets
+// transaction from context, so exists transaction can be used.
+func (s *UserRepo) txFromContext(ctx context.Context) (*sqlx.Tx, error) {
+
+	return s.options.CtxTran.TxFromContext(ctx)
 }
 
 // Create creates a new row in database by specified model.
@@ -174,7 +183,7 @@ func (s *UserRepo) getTxFromContext(ctx context.Context) (*sqlx.Tx, error) {
 // If model have "auto" primary key field - it's will be updated in-place.
 func (s *UserRepo) Create(ctx context.Context, m *User) error {
 
-	tx, err := s.getTxFromContext(ctx)
+	tx, err := s.txFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -210,7 +219,7 @@ func (s *UserRepo) iter(
 	opt ...Option,
 ) error {
 
-	tx, err := s.getTxFromContext(ctx)
+	tx, err := s.txFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -320,7 +329,7 @@ func (s *UserRepo) GetManySlice(ctx context.Context, ids []int64, opt ...Option)
 // Update updates database row by model.
 func (s *UserRepo) Update(ctx context.Context, m User) error {
 
-	tx, err := s.getTxFromContext(ctx)
+	tx, err := s.txFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -350,7 +359,7 @@ func (s *UserRepo) Update(ctx context.Context, m User) error {
 // See also: DeleteMany.
 func (s *UserRepo) Delete(ctx context.Context, id int64) (n int64, err error) {
 
-	tx, err := s.getTxFromContext(ctx)
+	tx, err := s.txFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -384,7 +393,7 @@ func (s *UserRepo) DeleteMany(ctx context.Context, ids []int64) (n int64, err er
 		return 0, nil
 	}
 
-	tx, err := s.getTxFromContext(ctx)
+	tx, err := s.txFromContext(ctx)
 	if err != nil {
 		return 0, err
 	}
