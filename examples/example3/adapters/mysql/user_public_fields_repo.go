@@ -259,6 +259,70 @@ func (s *UserPublicFieldsRepo) iter(
 	return nil
 }
 
+// iterWithOrder iterates other select with specified filter(s).
+//
+// Can be used in your custom query methods.
+func (s *UserPublicFieldsRepo) iterWithOrder(
+	ctx context.Context,
+	filter goqu.Expression,
+	f func(m UserPublicFields, stop func()),
+	order exp.OrderedExpression,
+	opt ...Option,
+) error {
+
+	tx, err := s.txFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	ds := s.dialect.From(s.t).Prepared(true)
+
+	if filter != nil {
+		ds = ds.Where(filter)
+	}
+	if order != nil {
+		ds = ds.Order(order)
+	}
+
+	for _, o := range opt {
+		o(ds)
+	}
+
+	q, args, err := ds.ToSQL()
+	if err != nil {
+		return fmt.Errorf("query builder error: %w", err)
+	}
+
+	sigCtx, sigCtxCancel := context.WithCancel(ctx)
+	defer sigCtxCancel()
+
+	rows, err := tx.QueryxContext(ctx, q, args...)
+	if err != nil {
+		return fmt.Errorf("select query error: %w", err)
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	for rows.Next() {
+		var m UserPublicFields
+		select {
+		case <-sigCtx.Done():
+			break
+		default:
+		}
+
+		err = rows.StructScan(&m)
+		if err != nil {
+			return fmt.Errorf("row scan error: %w", err)
+		}
+
+		f(m, func() { sigCtxCancel() })
+	}
+
+	return nil
+}
+
 // iterPrimaryKeys iterates other select with specified filter(s).
 //
 // Can be used in your custom query methods.
