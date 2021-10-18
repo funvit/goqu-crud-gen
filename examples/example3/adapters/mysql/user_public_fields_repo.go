@@ -205,7 +205,7 @@ func (s *UserPublicFieldsRepo) _Create(ctx context.Context, m *UserPublicFields)
 func (s *UserPublicFieldsRepo) iter(
 	ctx context.Context,
 	filter goqu.Expression,
-	f func(m UserPublicFields, stop func()),
+	fn func(m UserPublicFields) error,
 	opt ...Option,
 ) error {
 
@@ -253,19 +253,24 @@ func (s *UserPublicFieldsRepo) iter(
 			return fmt.Errorf("row scan error: %w", err)
 		}
 
-		f(m, func() { sigCtxCancel() })
+		err = fn(m)
+		if err != nil {
+			sigCtxCancel()
+			_ = rows.Close()
+			return fmt.Errorf("fn call: %w", err)
+		}
 	}
 
 	return nil
 }
 
-// iterWithOrder iterates other select with specified filter(s).
+// iterWithOrder iterates other select with specified filter(s) and order.
 //
 // Can be used in your custom query methods.
 func (s *UserPublicFieldsRepo) iterWithOrder(
 	ctx context.Context,
 	filter goqu.Expression,
-	f func(m UserPublicFields, stop func()),
+	fn func(m UserPublicFields) error,
 	order exp.OrderedExpression,
 	opt ...Option,
 ) error {
@@ -317,7 +322,12 @@ func (s *UserPublicFieldsRepo) iterWithOrder(
 			return fmt.Errorf("row scan error: %w", err)
 		}
 
-		f(m, func() { sigCtxCancel() })
+		err = fn(m)
+		if err != nil {
+			sigCtxCancel()
+			_ = rows.Close()
+			return fmt.Errorf("fn call: %w", err)
+		}
 	}
 
 	return nil
@@ -329,7 +339,7 @@ func (s *UserPublicFieldsRepo) iterWithOrder(
 func (s *UserPublicFieldsRepo) iterPrimaryKeys(
 	ctx context.Context,
 	filter goqu.Expression,
-	f func(pk interface{}, stop func()),
+	fn func(pk interface{}) error,
 	opt ...Option,
 ) error {
 
@@ -377,7 +387,12 @@ func (s *UserPublicFieldsRepo) iterPrimaryKeys(
 			return fmt.Errorf("row scan error: %w", err)
 		}
 
-		f(pk, func() { sigCtxCancel() })
+		err = fn(pk)
+		if err != nil {
+			sigCtxCancel()
+			_ = rows.Close()
+			return fmt.Errorf("fn call: %w", err)
+		}
 	}
 
 	return nil
@@ -388,13 +403,13 @@ func (s *UserPublicFieldsRepo) iterPrimaryKeys(
 // Can be used in your custom query methods, for example in All.
 //
 // See also: iter.
-func (s *UserPublicFieldsRepo) each(ctx context.Context, f func(m UserPublicFields)) error {
+func (s *UserPublicFieldsRepo) each(ctx context.Context, fn func(m UserPublicFields) error) error {
 
 	return s.iter(
 		ctx,
 		nil,
-		func(m UserPublicFields, _ func()) {
-			f(m)
+		func(m UserPublicFields) error {
+			return fn(m)
 		},
 	)
 }
@@ -408,9 +423,10 @@ func (s *UserPublicFieldsRepo) _Get(ctx context.Context, id uuid.UUID, opt ...Op
 	err := s.iter(
 		ctx,
 		s.f.PK().Eq(id),
-		func(m UserPublicFields, stop func()) {
+		func(m UserPublicFields) error {
+			// note: expected to be called once.
 			r = &m
-			stop()
+			return nil
 		},
 		opt...,
 	)
@@ -427,8 +443,9 @@ func (s *UserPublicFieldsRepo) _GetManySlice(ctx context.Context, ids []uuid.UUI
 	err := s.iter(
 		ctx,
 		s.f.PK().In(ids),
-		func(m UserPublicFields, _ func()) {
+		func(m UserPublicFields) error {
 			items = append(items, m)
+			return nil
 		},
 		opt...,
 	)

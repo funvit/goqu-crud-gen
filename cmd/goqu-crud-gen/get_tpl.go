@@ -8,7 +8,7 @@ const getTpl = `
 func (s *{{ .Repo.Name }}) iter(
 	ctx context.Context,
 	filter goqu.Expression,
-	f func(m {{ .Model.Name }}, stop func()),
+	fn func(m {{ .Model.Name }}) error,
 	opt ...Option,
 ) error {
 
@@ -56,19 +56,24 @@ func (s *{{ .Repo.Name }}) iter(
 			return fmt.Errorf("row scan error: %w", err)
 		}
 
-		f(m, func() { sigCtxCancel() })
+		err = fn(m)
+		if err != nil {
+			sigCtxCancel()
+			_ = rows.Close()
+			return fmt.Errorf("fn call: %w", err)
+		}
 	}
 
 	return nil
 }
 
-// iterWithOrder iterates other select with specified filter(s).
+// iterWithOrder iterates other select with specified filter(s) and order.
 //
 // Can be used in your custom query methods.
 func (s *{{ .Repo.Name }}) iterWithOrder(
 	ctx context.Context,
 	filter goqu.Expression,
-	f func(m {{ .Model.Name }}, stop func()),
+	fn func(m {{ .Model.Name }}) error,
 	order exp.OrderedExpression,
 	opt ...Option,
 ) error {
@@ -120,7 +125,12 @@ func (s *{{ .Repo.Name }}) iterWithOrder(
 			return fmt.Errorf("row scan error: %w", err)
 		}
 
-		f(m, func() { sigCtxCancel() })
+		err = fn(m)
+		if err != nil {
+			sigCtxCancel()
+			_ = rows.Close()
+			return fmt.Errorf("fn call: %w", err)
+		}
 	}
 
 	return nil
@@ -132,7 +142,7 @@ func (s *{{ .Repo.Name }}) iterWithOrder(
 func (s *{{ .Repo.Name }}) iterPrimaryKeys(
 	ctx context.Context,
 	filter goqu.Expression,
-	f func(pk interface{}, stop func()),
+	fn func(pk interface{}) error,
 	opt ...Option,
 ) error {
 
@@ -180,7 +190,12 @@ func (s *{{ .Repo.Name }}) iterPrimaryKeys(
 			return fmt.Errorf("row scan error: %w", err)
 		}
 
-		f(pk, func() { sigCtxCancel() })
+		err = fn(pk)
+		if err != nil {
+			sigCtxCancel()
+			_ = rows.Close()
+			return fmt.Errorf("fn call: %w", err)
+		}
 	}
 
 	return nil
@@ -191,13 +206,13 @@ func (s *{{ .Repo.Name }}) iterPrimaryKeys(
 // Can be used in your custom query methods, for example in All.
 //
 // See also: iter.
-func (s *{{ .Repo.Name }}) each(ctx context.Context, f func(m {{ .Model.Name }})) error {
+func (s *{{ .Repo.Name }}) each(ctx context.Context, fn func(m {{ .Model.Name }}) error) error {
 
 	return s.iter(
 		ctx,
 		nil,
-		func(m {{ .Model.Name }}, _ func()) {
-			f(m)
+		func(m {{ .Model.Name }}) error {
+			return fn(m)
 		},
 	)
 }
@@ -211,9 +226,10 @@ func (s *{{ .Repo.Name }}) {{"Get"|CRUD}}(ctx context.Context, id {{.Model.GetPr
 	err := s.iter(
 		ctx,
 		s.f.PK().Eq(id),
-		func(m {{ .Model.Name }}, stop func()) {
+		func(m {{ .Model.Name }}) error {
+			// note: expected to be called once.
 			r = &m
-			stop()
+			return nil
 		},
 		opt...,
 	)
@@ -230,8 +246,9 @@ func (s *{{ .Repo.Name }}) {{"GetManySlice"|CRUD}}(ctx context.Context, ids []{{
 	err := s.iter(
 		ctx,
 		s.f.PK().In(ids),
-		func(m {{ .Model.Name }}, _ func()) {
+		func(m {{ .Model.Name }}) error {
 			items = append(items, m)
+			return nil
 		},
 		opt...,
 	)

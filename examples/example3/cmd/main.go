@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"example3/adapters/mysql"
@@ -17,13 +18,18 @@ const (
 	dsn = "test_login:test_pass@tcp(localhost:53306)/example3"
 )
 
+var (
+	logInfo = log.New(os.Stdout, "INF ", log.LstdFlags)
+	logErr  = log.New(os.Stderr, "ERR ", log.LstdFlags)
+)
+
 func main() {
 	fmt.Println("Example3")
 
 	repo := mysql.NewUserRepo(dsn)
 	err := repo.Connect(3 * time.Second)
 	if err != nil {
-		log.Fatalf("repo connect error: %s", err)
+		logErr.Fatalf("repo connect error: %s", err)
 	}
 	repo.SetMaxOpenConns(100)
 	repo.SetConnMaxLifetime(5 * time.Minute)
@@ -31,9 +37,14 @@ func main() {
 	// migrate
 	err = migrateUp(dsn)
 	if err != nil {
-		log.Fatalln(err)
+		logErr.Fatalln(err)
 	}
-	defer migrateDown(dsn)
+	defer func() {
+		err = migrateDown(dsn)
+		if err != nil {
+			logErr.Fatalln("migrate down error:", err)
+		}
+	}()
 
 	// add record
 	var userId uuid.UUID
@@ -51,9 +62,9 @@ func main() {
 			return repo.Create(ctx, u)
 		})
 		if err != nil {
-			log.Fatalln("Create error:", err)
+			logErr.Fatalln("Create error:", err)
 		}
-		log.Printf("user record created: %+v", u)
+		logInfo.Printf("user record created: %+v", u)
 
 		userId = u.Id
 	}
@@ -66,13 +77,13 @@ func main() {
 			return err
 		})
 		if err != nil {
-			log.Fatalln("Get error:", err)
+			logErr.Fatalln("Get error:", err)
 		}
 		if u == nil {
-			log.Fatalln("user not exists")
+			logErr.Fatalln("user not exists")
 		}
 
-		log.Printf("repo Get user result: %+v", u)
+		logInfo.Printf("repo Get user result: %+v", u)
 	}
 
 	// delete record
@@ -81,10 +92,10 @@ func main() {
 			return repo.Delete(ctx, userId)
 		})
 		if err != nil {
-			log.Fatalln("Delete error:", err)
+			logErr.Fatalln("Delete error:", err)
 		}
 
-		log.Printf("repo Delete succeed")
+		logInfo.Printf("repo Delete succeed")
 	}
 
 	fmt.Println("End.")
@@ -95,7 +106,7 @@ func migrateUp(dsn string) error {
 	if err != nil {
 		return fmt.Errorf("connect error: %w", err)
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	queries := []string{
 		`
@@ -133,7 +144,7 @@ func migrateDown(dsn string) error {
 	if err != nil {
 		return fmt.Errorf("connect error: %w", err)
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	queries := []string{
 		`DROP TABLE user`,
