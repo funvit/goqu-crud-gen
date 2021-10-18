@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"example1/model"
@@ -16,21 +17,31 @@ const (
 	table = "user"
 )
 
+var (
+	logInfo = log.New(os.Stdout, "INF ", log.LstdFlags)
+	logErr  = log.New(os.Stderr, "ERR ", log.LstdFlags)
+)
+
 func main() {
 	fmt.Println("Example1")
 
 	repo := model.NewUserRepo(dsn)
 	err := repo.Connect(3 * time.Second)
 	if err != nil {
-		log.Fatalf("repo connect error: %s", err)
+		logErr.Fatalf("repo connect error: %s", err)
 	}
 
 	// migrate
 	err = migrateUp(dsn, table)
 	if err != nil {
-		log.Fatalln(err)
+		logErr.Fatalln(err)
 	}
-	defer migrateDown(dsn, table)
+	defer func() {
+		err = migrateDown(dsn, table)
+		if err != nil {
+			logErr.Fatalln("migrate down error:", err)
+		}
+	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -48,9 +59,9 @@ func main() {
 			return repo.Create(ctx, &u)
 		})
 		if err != nil {
-			log.Fatalln("Create error:", err)
+			logErr.Fatalln("Create error:", err)
 		}
-		log.Printf("user record created: %+v", u)
+		logInfo.Printf("user record created: %+v", u)
 
 		userId = u.Id
 	}
@@ -63,13 +74,13 @@ func main() {
 			return err
 		})
 		if err != nil {
-			log.Fatalln("Get error:", err)
+			logErr.Fatalln("Get error:", err)
 		}
 		if u == nil {
-			log.Fatalln("user not exists")
+			logErr.Fatalln("user not exists")
 		}
 
-		log.Printf("repo Get user result: %+v", u)
+		logInfo.Printf("repo Get user result: %+v", u)
 	}
 
 	fmt.Println("End.")
@@ -80,7 +91,7 @@ func migrateUp(dsn, table string) error {
 	if err != nil {
 		return fmt.Errorf("connect error: %w", err)
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	_, err = c.Exec(fmt.Sprintf(`
 		CREATE TABLE %s 
@@ -106,7 +117,7 @@ func migrateDown(dsn, table string) error {
 	if err != nil {
 		return fmt.Errorf("connect error: %w", err)
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	_, err = c.Exec(fmt.Sprintf(`DROP TABLE %s`, table))
 	if err != nil {

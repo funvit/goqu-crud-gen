@@ -211,7 +211,7 @@ func (s *AccountRepo) Create(ctx context.Context, m *Account) error {
 func (s *AccountRepo) iter(
 	ctx context.Context,
 	filter goqu.Expression,
-	f func(m Account, stop func()),
+	fn func(m Account) error,
 	opt ...Option,
 ) error {
 
@@ -259,19 +259,24 @@ func (s *AccountRepo) iter(
 			return fmt.Errorf("row scan error: %w", err)
 		}
 
-		f(m, func() { sigCtxCancel() })
+		err = fn(m)
+		if err != nil {
+			sigCtxCancel()
+			_ = rows.Close()
+			return fmt.Errorf("fn call: %w", err)
+		}
 	}
 
 	return nil
 }
 
-// iterWithOrder iterates other select with specified filter(s).
+// iterWithOrder iterates other select with specified filter(s) and order.
 //
 // Can be used in your custom query methods.
 func (s *AccountRepo) iterWithOrder(
 	ctx context.Context,
 	filter goqu.Expression,
-	f func(m Account, stop func()),
+	fn func(m Account) error,
 	order exp.OrderedExpression,
 	opt ...Option,
 ) error {
@@ -323,7 +328,12 @@ func (s *AccountRepo) iterWithOrder(
 			return fmt.Errorf("row scan error: %w", err)
 		}
 
-		f(m, func() { sigCtxCancel() })
+		err = fn(m)
+		if err != nil {
+			sigCtxCancel()
+			_ = rows.Close()
+			return fmt.Errorf("fn call: %w", err)
+		}
 	}
 
 	return nil
@@ -335,7 +345,7 @@ func (s *AccountRepo) iterWithOrder(
 func (s *AccountRepo) iterPrimaryKeys(
 	ctx context.Context,
 	filter goqu.Expression,
-	f func(pk interface{}, stop func()),
+	fn func(pk interface{}) error,
 	opt ...Option,
 ) error {
 
@@ -383,7 +393,12 @@ func (s *AccountRepo) iterPrimaryKeys(
 			return fmt.Errorf("row scan error: %w", err)
 		}
 
-		f(pk, func() { sigCtxCancel() })
+		err = fn(pk)
+		if err != nil {
+			sigCtxCancel()
+			_ = rows.Close()
+			return fmt.Errorf("fn call: %w", err)
+		}
 	}
 
 	return nil
@@ -394,13 +409,13 @@ func (s *AccountRepo) iterPrimaryKeys(
 // Can be used in your custom query methods, for example in All.
 //
 // See also: iter.
-func (s *AccountRepo) each(ctx context.Context, f func(m Account)) error {
+func (s *AccountRepo) each(ctx context.Context, fn func(m Account) error) error {
 
 	return s.iter(
 		ctx,
 		nil,
-		func(m Account, _ func()) {
-			f(m)
+		func(m Account) error {
+			return fn(m)
 		},
 	)
 }
@@ -414,9 +429,10 @@ func (s *AccountRepo) Get(ctx context.Context, id uuid.UUID, opt ...Option) (*Ac
 	err := s.iter(
 		ctx,
 		s.f.PK().Eq(id),
-		func(m Account, stop func()) {
+		func(m Account) error {
+			// note: expected to be called once.
 			r = &m
-			stop()
+			return nil
 		},
 		opt...,
 	)
@@ -433,8 +449,9 @@ func (s *AccountRepo) GetManySlice(ctx context.Context, ids []uuid.UUID, opt ...
 	err := s.iter(
 		ctx,
 		s.f.PK().In(ids),
-		func(m Account, _ func()) {
+		func(m Account) error {
 			items = append(items, m)
+			return nil
 		},
 		opt...,
 	)
