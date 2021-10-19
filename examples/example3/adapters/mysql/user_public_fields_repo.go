@@ -244,7 +244,8 @@ func (s *UserPublicFieldsRepo) iter(
 		var m UserPublicFields
 		select {
 		case <-sigCtx.Done():
-			break
+			_ = rows.Close()
+			return context.Canceled
 		default:
 		}
 
@@ -313,7 +314,8 @@ func (s *UserPublicFieldsRepo) iterWithOrder(
 		var m UserPublicFields
 		select {
 		case <-sigCtx.Done():
-			break
+			_ = rows.Close()
+			return context.Canceled
 		default:
 		}
 
@@ -378,7 +380,8 @@ func (s *UserPublicFieldsRepo) iterPrimaryKeys(
 		var pk interface{}
 		select {
 		case <-sigCtx.Done():
-			break
+			_ = rows.Close()
+			return context.Canceled
 		default:
 		}
 

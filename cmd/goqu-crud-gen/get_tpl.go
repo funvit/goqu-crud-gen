@@ -47,7 +47,8 @@ func (s *{{ .Repo.Name }}) iter(
 		var m {{ .Model.Name }}
 		select {
 		case <-sigCtx.Done():
-			break
+			_ = rows.Close()
+			return context.Canceled
 		default:
 		}
 
@@ -116,7 +117,8 @@ func (s *{{ .Repo.Name }}) iterWithOrder(
 		var m {{ .Model.Name }}
 		select {
 		case <-sigCtx.Done():
-			break
+			_ = rows.Close()
+			return context.Canceled
 		default:
 		}
 
@@ -181,7 +183,8 @@ func (s *{{ .Repo.Name }}) iterPrimaryKeys(
 		var pk interface{}
 		select {
 		case <-sigCtx.Done():
-			break
+			_ = rows.Close()
+			return context.Canceled
 		default:
 		}
 
