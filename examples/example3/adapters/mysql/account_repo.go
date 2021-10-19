@@ -250,7 +250,8 @@ func (s *AccountRepo) iter(
 		var m Account
 		select {
 		case <-sigCtx.Done():
-			break
+			_ = rows.Close()
+			return context.Canceled
 		default:
 		}
 
@@ -319,7 +320,8 @@ func (s *AccountRepo) iterWithOrder(
 		var m Account
 		select {
 		case <-sigCtx.Done():
-			break
+			_ = rows.Close()
+			return context.Canceled
 		default:
 		}
 
@@ -384,7 +386,8 @@ func (s *AccountRepo) iterPrimaryKeys(
 		var pk interface{}
 		select {
 		case <-sigCtx.Done():
-			break
+			_ = rows.Close()
+			return context.Canceled
 		default:
 		}
 

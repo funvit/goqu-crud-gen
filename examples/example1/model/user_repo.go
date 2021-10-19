@@ -254,7 +254,8 @@ func (s *UserRepo) iter(
 		var m User
 		select {
 		case <-sigCtx.Done():
-			break
+			_ = rows.Close()
+			return context.Canceled
 		default:
 		}
 
@@ -323,7 +324,8 @@ func (s *UserRepo) iterWithOrder(
 		var m User
 		select {
 		case <-sigCtx.Done():
-			break
+			_ = rows.Close()
+			return context.Canceled
 		default:
 		}
 
@@ -388,7 +390,8 @@ func (s *UserRepo) iterPrimaryKeys(
 		var pk interface{}
 		select {
 		case <-sigCtx.Done():
-			break
+			_ = rows.Close()
+			return context.Canceled
 		default:
 		}
 
