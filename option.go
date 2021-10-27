@@ -15,6 +15,13 @@ func WithLockForUpdate() Option {
 	}
 }
 
+// WithLimit option used to limit select.
+func WithLimit(u uint) Option {
+	return func(ds *goqu.SelectDataset) {
+		ds.Limit(u)
+	}
+}
+
 type RepositoryOption func(o *RepositoryOpt)
 
 type RepositoryOpt struct {
