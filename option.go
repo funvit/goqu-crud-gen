@@ -22,6 +22,20 @@ func WithLimit(u uint) Option {
 	}
 }
 
+// WithOrder option used to order select.
+func WithOrder(order ...exp.OrderedExpression) Option {
+	return func(ds *goqu.SelectDataset) {
+		ds.Order(order...)
+	}
+}
+
+// WithFilter option used to filter select.
+func WithFilter(exp ...exp.Expression) Option {
+	return func(ds *goqu.SelectDataset) {
+		ds.Where(exp...)
+	}
+}
+
 type RepositoryOption func(o *RepositoryOpt)
 
 type RepositoryOpt struct {

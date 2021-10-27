@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"example3/domain"
-	. "github.com/funvit/goqu-crud-gen"
 	"github.com/google/uuid"
 )
 
@@ -55,11 +54,17 @@ func (s UserRepo) Connect(wait time.Duration) error {
 	return nil
 }
 
-func (s *UserRepo) get(ctx context.Context, id uuid.UUID, opt ...Option) (*domain.User, error) {
+func (s *UserRepo) get(ctx context.Context, id uuid.UUID, forUpdate bool) (m *domain.User, err error) {
 
 	// fixme: second Get flaky: bad conn
 
-	p, err := s._Get(ctx, id, opt...)
+	var p *UserPublicFields
+
+	if forUpdate {
+		p, err = s._GetForUpdate(ctx, id)
+	} else {
+		p, err = s._Get(ctx, id)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +72,12 @@ func (s *UserRepo) get(ctx context.Context, id uuid.UUID, opt ...Option) (*domai
 		return nil, nil
 	}
 
-	a, err := s.accRepo.Get(ctx, id, opt...)
+	var a *Account
+	if forUpdate {
+		a, err = s.accRepo.GetForUpdate(ctx, id)
+	} else {
+		a, err = s.accRepo.Get(ctx, id)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -103,11 +113,11 @@ func (s *UserRepo) Create(ctx context.Context, u domain.User) error {
 }
 
 func (s *UserRepo) Get(ctx context.Context, id uuid.UUID) (*domain.User, error) {
-	return s.get(ctx, id)
+	return s.get(ctx, id, false)
 }
 
 func (s *UserRepo) GetForUpdate(ctx context.Context, id uuid.UUID) (*domain.User, error) {
-	return s.get(ctx, id, WithLockForUpdate())
+	return s.get(ctx, id, true)
 }
 
 func (s *UserRepo) Delete(ctx context.Context, id uuid.UUID) error {

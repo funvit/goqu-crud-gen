@@ -199,12 +199,13 @@ func (s *UserPublicFieldsRepo) _Create(ctx context.Context, m *UserPublicFields)
 	return nil
 }
 
-// iter iterates other select with specified filter(s).
+// iter iterates other select.
 //
 // Can be used in your custom query methods.
+//
+// Filters, limit or order can be set via opts.
 func (s *UserPublicFieldsRepo) iter(
 	ctx context.Context,
-	filter goqu.Expression,
 	fn func(m UserPublicFields) error,
 	opt ...Option,
 ) error {
@@ -215,80 +216,6 @@ func (s *UserPublicFieldsRepo) iter(
 	}
 
 	ds := s.dialect.From(s.t).Prepared(true)
-
-	if filter != nil {
-		ds = ds.Where(filter)
-	}
-
-	for _, o := range opt {
-		o(ds)
-	}
-
-	q, args, err := ds.ToSQL()
-	if err != nil {
-		return fmt.Errorf("query builder error: %w", err)
-	}
-
-	sigCtx, sigCtxCancel := context.WithCancel(ctx)
-	defer sigCtxCancel()
-
-	rows, err := tx.QueryxContext(ctx, q, args...)
-	if err != nil {
-		return fmt.Errorf("select query error: %w", err)
-	}
-	defer func() {
-		_ = rows.Close()
-	}()
-
-	for rows.Next() {
-		var m UserPublicFields
-		select {
-		case <-sigCtx.Done():
-			_ = rows.Close()
-			return context.Canceled
-		default:
-		}
-
-		err = rows.StructScan(&m)
-		if err != nil {
-			return fmt.Errorf("row scan error: %w", err)
-		}
-
-		err = fn(m)
-		if err != nil {
-			sigCtxCancel()
-			_ = rows.Close()
-			return fmt.Errorf("fn call: %w", err)
-		}
-	}
-
-	return nil
-}
-
-// iterWithOrder iterates other select with specified filter(s) and order.
-//
-// Can be used in your custom query methods.
-func (s *UserPublicFieldsRepo) iterWithOrder(
-	ctx context.Context,
-	filter goqu.Expression,
-	fn func(m UserPublicFields) error,
-	order exp.OrderedExpression,
-	opt ...Option,
-) error {
-
-	tx, err := s.txFromContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	ds := s.dialect.From(s.t).Prepared(true)
-
-	if filter != nil {
-		ds = ds.Where(filter)
-	}
-	if order != nil {
-		ds = ds.Order(order)
-	}
 
 	for _, o := range opt {
 		o(ds)
@@ -338,9 +265,10 @@ func (s *UserPublicFieldsRepo) iterWithOrder(
 // iterPrimaryKeys iterates other select with specified filter(s).
 //
 // Can be used in your custom query methods.
+//
+// Filters, limit or order can be set via opts.
 func (s *UserPublicFieldsRepo) iterPrimaryKeys(
 	ctx context.Context,
-	filter goqu.Expression,
 	fn func(pk interface{}) error,
 	opt ...Option,
 ) error {
@@ -351,10 +279,6 @@ func (s *UserPublicFieldsRepo) iterPrimaryKeys(
 	}
 
 	ds := s.dialect.From(s.t).Prepared(true).Select(s.f.PK())
-
-	if filter != nil {
-		ds = ds.Where(filter)
-	}
 
 	for _, o := range opt {
 		o(ds)
@@ -401,37 +325,27 @@ func (s *UserPublicFieldsRepo) iterPrimaryKeys(
 	return nil
 }
 
-// each calls wide select.
-//
-// Can be used in your custom query methods, for example in All.
-//
-// See also: iter.
-func (s *UserPublicFieldsRepo) each(ctx context.Context, fn func(m UserPublicFields) error) error {
-
-	return s.iter(
-		ctx,
-		nil,
-		func(m UserPublicFields) error {
-			return fn(m)
-		},
-	)
-}
-
 // _Get gets model from database.
 //
 // Note: returns (nil, nil) if row not found.
-func (s *UserPublicFieldsRepo) _Get(ctx context.Context, id uuid.UUID, opt ...Option) (*UserPublicFields, error) {
+//
+// See also: _GetForUpdate.
+func (s *UserPublicFieldsRepo) _Get(ctx context.Context, id uuid.UUID) (*UserPublicFields, error) {
 
 	var r *UserPublicFields
+
+	opts := []Option{
+		WithFilter(s.f.PK().Eq(id)),
+	}
+
 	err := s.iter(
 		ctx,
-		s.f.PK().Eq(id),
 		func(m UserPublicFields) error {
 			// note: expected to be called once.
 			r = &m
 			return nil
 		},
-		opt...,
+		opts...,
 	)
 	if err != nil {
 		return nil, err
@@ -440,17 +354,81 @@ func (s *UserPublicFieldsRepo) _Get(ctx context.Context, id uuid.UUID, opt ...Op
 	return r, nil
 }
 
-func (s *UserPublicFieldsRepo) _GetManySlice(ctx context.Context, ids []uuid.UUID, opt ...Option) ([]UserPublicFields, error) {
-	items := make([]UserPublicFields, 0, len(ids))
+// _GetForUpdate gets model from database for update (i.e. locks row).
+//
+// Note: returns (nil, nil) if row not found.
+//
+// See also: _Get.
+func (s *UserPublicFieldsRepo) _GetForUpdate(ctx context.Context, id uuid.UUID) (*UserPublicFields, error) {
+
+	var r *UserPublicFields
+
+	opts := []Option{
+		WithFilter(s.f.PK().Eq(id)),
+		WithLockForUpdate(),
+	}
 
 	err := s.iter(
 		ctx,
-		s.f.PK().In(ids),
+		func(m UserPublicFields) error {
+			// note: expected to be called once.
+			r = &m
+			return nil
+		},
+		opts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+// _GetMany gets models from database.
+//
+// See also: _GetManyForUpdate.
+func (s *UserPublicFieldsRepo) _GetMany(ctx context.Context, ids []uuid.UUID) ([]UserPublicFields, error) {
+
+	items := make([]UserPublicFields, 0, len(ids))
+
+	opts := []Option{
+		WithFilter(s.f.PK().In(ids)),
+	}
+
+	err := s.iter(
+		ctx,
 		func(m UserPublicFields) error {
 			items = append(items, m)
 			return nil
 		},
-		opt...,
+		opts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
+// _GetManyForUpdate gets models from database for update (i.e. locks rows).
+//
+// See also: _GetMany.
+func (s *UserPublicFieldsRepo) _GetManyForUpdate(ctx context.Context, ids []uuid.UUID) ([]UserPublicFields, error) {
+
+	items := make([]UserPublicFields, 0, len(ids))
+
+	opts := []Option{
+		WithFilter(s.f.PK().In(ids)),
+		WithLockForUpdate(),
+	}
+
+	err := s.iter(
+		ctx,
+		func(m UserPublicFields) error {
+			items = append(items, m)
+			return nil
+		},
+		opts...,
 	)
 	if err != nil {
 		return nil, err

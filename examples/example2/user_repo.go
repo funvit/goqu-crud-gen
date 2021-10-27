@@ -210,12 +210,13 @@ func (s *UserRepo) Create(ctx context.Context, m *User) error {
 	return nil
 }
 
-// iter iterates other select with specified filter(s).
+// iter iterates other select.
 //
 // Can be used in your custom query methods.
+//
+// Filters, limit or order can be set via opts.
 func (s *UserRepo) iter(
 	ctx context.Context,
-	filter goqu.Expression,
 	fn func(m User) error,
 	opt ...Option,
 ) error {
@@ -226,80 +227,6 @@ func (s *UserRepo) iter(
 	}
 
 	ds := s.dialect.From(s.t).Prepared(true)
-
-	if filter != nil {
-		ds = ds.Where(filter)
-	}
-
-	for _, o := range opt {
-		o(ds)
-	}
-
-	q, args, err := ds.ToSQL()
-	if err != nil {
-		return fmt.Errorf("query builder error: %w", err)
-	}
-
-	sigCtx, sigCtxCancel := context.WithCancel(ctx)
-	defer sigCtxCancel()
-
-	rows, err := tx.QueryxContext(ctx, q, args...)
-	if err != nil {
-		return fmt.Errorf("select query error: %w", err)
-	}
-	defer func() {
-		_ = rows.Close()
-	}()
-
-	for rows.Next() {
-		var m User
-		select {
-		case <-sigCtx.Done():
-			_ = rows.Close()
-			return context.Canceled
-		default:
-		}
-
-		err = rows.StructScan(&m)
-		if err != nil {
-			return fmt.Errorf("row scan error: %w", err)
-		}
-
-		err = fn(m)
-		if err != nil {
-			sigCtxCancel()
-			_ = rows.Close()
-			return fmt.Errorf("fn call: %w", err)
-		}
-	}
-
-	return nil
-}
-
-// iterWithOrder iterates other select with specified filter(s) and order.
-//
-// Can be used in your custom query methods.
-func (s *UserRepo) iterWithOrder(
-	ctx context.Context,
-	filter goqu.Expression,
-	fn func(m User) error,
-	order exp.OrderedExpression,
-	opt ...Option,
-) error {
-
-	tx, err := s.txFromContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	ds := s.dialect.From(s.t).Prepared(true)
-
-	if filter != nil {
-		ds = ds.Where(filter)
-	}
-	if order != nil {
-		ds = ds.Order(order)
-	}
 
 	for _, o := range opt {
 		o(ds)
@@ -349,9 +276,10 @@ func (s *UserRepo) iterWithOrder(
 // iterPrimaryKeys iterates other select with specified filter(s).
 //
 // Can be used in your custom query methods.
+//
+// Filters, limit or order can be set via opts.
 func (s *UserRepo) iterPrimaryKeys(
 	ctx context.Context,
-	filter goqu.Expression,
 	fn func(pk interface{}) error,
 	opt ...Option,
 ) error {
@@ -362,10 +290,6 @@ func (s *UserRepo) iterPrimaryKeys(
 	}
 
 	ds := s.dialect.From(s.t).Prepared(true).Select(s.f.PK())
-
-	if filter != nil {
-		ds = ds.Where(filter)
-	}
 
 	for _, o := range opt {
 		o(ds)
@@ -412,37 +336,27 @@ func (s *UserRepo) iterPrimaryKeys(
 	return nil
 }
 
-// each calls wide select.
-//
-// Can be used in your custom query methods, for example in All.
-//
-// See also: iter.
-func (s *UserRepo) each(ctx context.Context, fn func(m User) error) error {
-
-	return s.iter(
-		ctx,
-		nil,
-		func(m User) error {
-			return fn(m)
-		},
-	)
-}
-
 // Get gets model from database.
 //
 // Note: returns (nil, nil) if row not found.
-func (s *UserRepo) Get(ctx context.Context, id int64, opt ...Option) (*User, error) {
+//
+// See also: GetForUpdate.
+func (s *UserRepo) Get(ctx context.Context, id int64) (*User, error) {
 
 	var r *User
+
+	opts := []Option{
+		WithFilter(s.f.PK().Eq(id)),
+	}
+
 	err := s.iter(
 		ctx,
-		s.f.PK().Eq(id),
 		func(m User) error {
 			// note: expected to be called once.
 			r = &m
 			return nil
 		},
-		opt...,
+		opts...,
 	)
 	if err != nil {
 		return nil, err
@@ -451,17 +365,81 @@ func (s *UserRepo) Get(ctx context.Context, id int64, opt ...Option) (*User, err
 	return r, nil
 }
 
-func (s *UserRepo) GetManySlice(ctx context.Context, ids []int64, opt ...Option) ([]User, error) {
-	items := make([]User, 0, len(ids))
+// GetForUpdate gets model from database for update (i.e. locks row).
+//
+// Note: returns (nil, nil) if row not found.
+//
+// See also: Get.
+func (s *UserRepo) GetForUpdate(ctx context.Context, id int64) (*User, error) {
+
+	var r *User
+
+	opts := []Option{
+		WithFilter(s.f.PK().Eq(id)),
+		WithLockForUpdate(),
+	}
 
 	err := s.iter(
 		ctx,
-		s.f.PK().In(ids),
+		func(m User) error {
+			// note: expected to be called once.
+			r = &m
+			return nil
+		},
+		opts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+// GetMany gets models from database.
+//
+// See also: GetManyForUpdate.
+func (s *UserRepo) GetMany(ctx context.Context, ids []int64) ([]User, error) {
+
+	items := make([]User, 0, len(ids))
+
+	opts := []Option{
+		WithFilter(s.f.PK().In(ids)),
+	}
+
+	err := s.iter(
+		ctx,
 		func(m User) error {
 			items = append(items, m)
 			return nil
 		},
-		opt...,
+		opts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
+// GetManyForUpdate gets models from database for update (i.e. locks rows).
+//
+// See also: GetMany.
+func (s *UserRepo) GetManyForUpdate(ctx context.Context, ids []int64) ([]User, error) {
+
+	items := make([]User, 0, len(ids))
+
+	opts := []Option{
+		WithFilter(s.f.PK().In(ids)),
+		WithLockForUpdate(),
+	}
+
+	err := s.iter(
+		ctx,
+		func(m User) error {
+			items = append(items, m)
+			return nil
+		},
+		opts...,
 	)
 	if err != nil {
 		return nil, err
