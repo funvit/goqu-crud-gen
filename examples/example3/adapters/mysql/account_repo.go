@@ -193,12 +193,12 @@ func (s *AccountRepo) Create(ctx context.Context, m *Account) error {
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
-		return fmt.Errorf("query builder error: %w", err)
+		return fmt.Errorf("query builder: to sql: %w", err)
 	}
 
 	res, err := tx.Exec(q, args...)
 	if err != nil {
-		return fmt.Errorf("insert query error: %w", err)
+		return fmt.Errorf("tx: exec: %w", err)
 	}
 	_ = res
 
@@ -229,15 +229,15 @@ func (s *AccountRepo) iter(
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
-		return fmt.Errorf("query builder error: %w", err)
+		return fmt.Errorf("query builder: to sql: %w", err)
 	}
 
 	sigCtx, sigCtxCancel := context.WithCancel(ctx)
 	defer sigCtxCancel()
 
-	rows, err := tx.QueryxContext(ctx, q, args...)
+	rows, err := tx.QueryxContext(sigCtx, q, args...)
 	if err != nil {
-		return fmt.Errorf("select query error: %w", err)
+		return fmt.Errorf("tx: query rows: %w", err)
 	}
 	defer func() {
 		_ = rows.Close()
@@ -245,22 +245,20 @@ func (s *AccountRepo) iter(
 
 	for rows.Next() {
 		var m Account
-		select {
-		case <-sigCtx.Done():
-			_ = rows.Close()
-			return context.Canceled
-		default:
+
+		err = ctx.Err()
+		if err != nil {
+			return fmt.Errorf("rows: next: %w", err)
 		}
 
 		err = rows.StructScan(&m)
 		if err != nil {
-			return fmt.Errorf("row scan error: %w", err)
+			return fmt.Errorf("rows struct scan: %w", err)
 		}
 
 		err = fn(m)
 		if err != nil {
 			sigCtxCancel()
-			_ = rows.Close()
 			return fmt.Errorf("fn call: %w", err)
 		}
 	}
@@ -292,15 +290,15 @@ func (s *AccountRepo) iterPrimaryKeys(
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
-		return fmt.Errorf("query builder error: %w", err)
+		return fmt.Errorf("query builder: to sql: %w", err)
 	}
 
 	sigCtx, sigCtxCancel := context.WithCancel(ctx)
 	defer sigCtxCancel()
 
-	rows, err := tx.QueryxContext(ctx, q, args...)
+	rows, err := tx.QueryxContext(sigCtx, q, args...)
 	if err != nil {
-		return fmt.Errorf("select query error: %w", err)
+		return fmt.Errorf("tx: query rows: %w", err)
 	}
 	defer func() {
 		_ = rows.Close()
@@ -308,16 +306,15 @@ func (s *AccountRepo) iterPrimaryKeys(
 
 	for rows.Next() {
 		var pk interface{}
-		select {
-		case <-sigCtx.Done():
-			_ = rows.Close()
-			return context.Canceled
-		default:
+
+		err = ctx.Err()
+		if err != nil {
+			return fmt.Errorf("rows: next: %w", err)
 		}
 
 		err = rows.Scan(&pk)
 		if err != nil {
-			return fmt.Errorf("row scan error: %w", err)
+			return fmt.Errorf("row scan: %w", err)
 		}
 
 		err = fn(pk)
@@ -458,12 +455,12 @@ func (s *AccountRepo) Update(ctx context.Context, m Account) error {
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
-		return fmt.Errorf("query builder error: %w", err)
+		return fmt.Errorf("query builder: to sql: %w", err)
 	}
 
 	_, err = tx.Exec(q, args...)
 	if err != nil {
-		return fmt.Errorf("update query error: %w", err)
+		return fmt.Errorf("tx: exec: %w", err)
 	}
 
 	return nil
@@ -485,12 +482,12 @@ func (s *AccountRepo) Delete(ctx context.Context, id uuid.UUID) (n int64, err er
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
-		return 0, fmt.Errorf("query builder error: %w", err)
+		return 0, fmt.Errorf("query builder: to sql: %w", err)
 	}
 
 	res, err := tx.Exec(q, args...)
 	if err != nil {
-		return 0, fmt.Errorf("delete query error: %w", err)
+		return 0, fmt.Errorf("tx: exec query: %w", err)
 	}
 
 	return res.RowsAffected()
@@ -519,12 +516,12 @@ func (s *AccountRepo) DeleteMany(ctx context.Context, ids []uuid.UUID) (n int64,
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
-		return 0, fmt.Errorf("query builder error: %w", err)
+		return 0, fmt.Errorf("query builder: to sql: %w", err)
 	}
 
 	res, err := tx.Exec(q, args...)
 	if err != nil {
-		return 0, fmt.Errorf("delete query error: %w", err)
+		return 0, fmt.Errorf("tx: exec: %w", err)
 	}
 
 	return res.RowsAffected()

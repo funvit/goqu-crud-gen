@@ -26,15 +26,15 @@ func (s *{{ .Repo.Name }}) iter(
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
-		return fmt.Errorf("query builder error: %w", err)
+		return fmt.Errorf("query builder: to sql: %w", err)
 	}
 
 	sigCtx, sigCtxCancel := context.WithCancel(ctx)
 	defer sigCtxCancel()
 
-	rows, err := tx.QueryxContext(ctx, q, args...)
+	rows, err := tx.QueryxContext(sigCtx, q, args...)
 	if err != nil {
-		return fmt.Errorf("select query error: %w", err)
+		return fmt.Errorf("tx: query rows: %w", err)
 	}
 	defer func() {
 		_ = rows.Close()
@@ -42,22 +42,20 @@ func (s *{{ .Repo.Name }}) iter(
 
 	for rows.Next() {
 		var m {{ .Model.Name }}
-		select {
-		case <-sigCtx.Done():
-			_ = rows.Close()
-			return context.Canceled
-		default:
+
+		err = ctx.Err()
+		if err != nil {
+			return fmt.Errorf("rows: next: %w", err)
 		}
 
 		err = rows.StructScan(&m)
 		if err != nil {
-			return fmt.Errorf("row scan error: %w", err)
+			return fmt.Errorf("rows struct scan: %w", err)
 		}
 
 		err = fn(m)
 		if err != nil {
 			sigCtxCancel()
-			_ = rows.Close()
 			return fmt.Errorf("fn call: %w", err)
 		}
 	}
@@ -89,15 +87,15 @@ func (s *{{ .Repo.Name }}) iterPrimaryKeys(
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
-		return fmt.Errorf("query builder error: %w", err)
+		return fmt.Errorf("query builder: to sql: %w", err)
 	}
 
 	sigCtx, sigCtxCancel := context.WithCancel(ctx)
 	defer sigCtxCancel()
 
-	rows, err := tx.QueryxContext(ctx, q, args...)
+	rows, err := tx.QueryxContext(sigCtx, q, args...)
 	if err != nil {
-		return fmt.Errorf("select query error: %w", err)
+		return fmt.Errorf("tx: query rows: %w", err)
 	}
 	defer func() {
 		_ = rows.Close()
@@ -105,16 +103,15 @@ func (s *{{ .Repo.Name }}) iterPrimaryKeys(
 
 	for rows.Next() {
 		var pk interface{}
-		select {
-		case <-sigCtx.Done():
-			_ = rows.Close()
-			return context.Canceled
-		default:
+
+		err = ctx.Err()
+		if err != nil {
+			return fmt.Errorf("rows: next: %w", err)
 		}
 
 		err = rows.Scan(&pk)
 		if err != nil {
-			return fmt.Errorf("row scan error: %w", err)
+			return fmt.Errorf("row scan: %w", err)
 		}
 
 		err = fn(pk)

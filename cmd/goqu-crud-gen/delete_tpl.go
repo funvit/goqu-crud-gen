@@ -18,12 +18,12 @@ func (s *{{.Repo.Name}}) {{"Delete"|CRUD}}(ctx context.Context, id {{.Model.GetP
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
-		return 0, fmt.Errorf("query builder error: %w", err)
+		return 0, fmt.Errorf("query builder: to sql: %w", err)
 	}
 
 	res, err := tx.Exec(q, args...)
 	if err != nil {
-		return 0, fmt.Errorf("delete query error: %w", err)
+		return 0, fmt.Errorf("tx: exec query: %w", err)
 	}
 
 	return res.RowsAffected()
@@ -52,12 +52,12 @@ func (s *{{ .Repo.Name }}) {{"DeleteMany"|CRUD}}(ctx context.Context, ids []{{.M
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
-		return 0, fmt.Errorf("query builder error: %w", err)
+		return 0, fmt.Errorf("query builder: to sql: %w", err)
 	}
 
 	res, err := tx.Exec(q, args...)
 	if err != nil {
-		return 0, fmt.Errorf("delete query error: %w", err)
+		return 0, fmt.Errorf("tx: exec: %w", err)
 	}
 
 	return res.RowsAffected()

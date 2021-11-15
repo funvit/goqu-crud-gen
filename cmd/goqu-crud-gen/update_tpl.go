@@ -17,12 +17,12 @@ func (s *{{.Repo.Name}}) {{"Update"|CRUD}}(ctx context.Context, m {{.Model.Name}
 
 	q, args, err := ds.ToSQL()
 	if err != nil {
-		return fmt.Errorf("query builder error: %w", err)
+		return fmt.Errorf("query builder: to sql: %w", err)
 	}
 
 	_, err = tx.Exec(q, args...)
 	if err != nil {
-		return fmt.Errorf("update query error: %w", err)
+		return fmt.Errorf("tx: exec: %w", err)
 	}
 
 	return nil
