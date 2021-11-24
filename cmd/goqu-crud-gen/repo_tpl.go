@@ -107,7 +107,7 @@ func (s *{{ .Repo.Name|Private }}Fields) PK() exp.IdentifierExpression {
 // Must be called after New{{ .Repo.Name }} and before any repo methods.
 func (s *{{ .Repo.Name }}) Connect(wait time.Duration) error {
 
-	if s.dsn != "" {
+	if s.db == nil {
 		db, err := sqlx.Open(s.dialectName, s.dsn)
 		if err != nil {
 			return err
