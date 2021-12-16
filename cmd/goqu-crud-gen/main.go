@@ -225,7 +225,11 @@ func main() {
 	if !d.Model.HasPrimaryKeyField() {
 		logError.Fatalln("model have no field with \"primary\" mark (db tag option)")
 	}
-	logDebug.Printf("model primary key field: %s", d.Model.GetPrimaryKeyField().Name)
+	logDebug.Printf(
+		"model primary key field: %s with type: %s",
+		d.Model.GetPrimaryKeyField().Name,
+		d.Model.GetPrimaryKeyField().Type,
+	)
 
 	// endregion
 
@@ -414,6 +418,24 @@ func modelToTplDTO(p *ast.Package, modelName string) (*tplDTO, error) {
 			} else {
 				mf.Type = v.Sel.String()
 			}
+		} else if v, ok := field.Type.(*ast.ArrayType); ok {
+			if v.Len == nil {
+				mf.Type = fmt.Sprintf(
+					"[]%s",
+					v.Elt.(*ast.Ident).String(),
+				)
+			} else {
+				mf.Type = fmt.Sprintf(
+					"[%s]%s",
+					v.Len.(*ast.BasicLit).Value,
+					v.Elt.(*ast.Ident).String(),
+				)
+			}
+		} else {
+			return nil, errors.New(fmt.Sprintln(
+				"cannot determine field:", field.Names,
+				"type:", field.Type,
+			))
 		}
 
 		r.Model.Fields = append(r.Model.Fields, mf)
