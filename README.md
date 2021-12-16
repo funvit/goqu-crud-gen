@@ -1,5 +1,7 @@
 # GOQU CRUD Generator
 
+[![Go](https://github.com/funvit/goqu-crud-gen/actions/workflows/go.yml/badge.svg)](https://github.com/funvit/goqu-crud-gen/actions/workflows/go.yml)
+
 > Work in progress!
 
 Generates a basic repository by db model definition.
